@@ -146,6 +146,10 @@ export function startApp(root: HTMLElement): void {
       }
       return;
     }
+    if (!help.hidden) {
+      if (isAppShortcut(ev)) ev.preventDefault();
+      return;
+    }
     if (ev.key === "t" || ev.key === "T") {
       toggleTheme();
       if (page) page.recolor();
@@ -197,4 +201,23 @@ export function startApp(root: HTMLElement): void {
     requestAnimationFrame(pump);
   };
   requestAnimationFrame(pump);
+}
+
+/** Keys the playground binds globally; swallowed while the help dialog is open. */
+function isAppShortcut(ev: KeyboardEvent): boolean {
+  if (ev.code === "Space" || ev.key === " ") return true;
+  if (ev.key >= "0" && ev.key <= "5") return true;
+  switch (ev.key) {
+    case "t":
+    case "T":
+    case "p":
+    case "P":
+    case "r":
+    case "R":
+    case "[":
+    case "]":
+      return true;
+    default:
+      return false;
+  }
 }
