@@ -50,7 +50,7 @@ export function mountSimPage(
       <div class="stage">
         <div class="viewport">
           <canvas id="world" aria-label="${meta.title} animation"></canvas>
-          <div class="readout" id="world-readout"></div>
+          <div class="readout" id="world-readout" aria-hidden="true"></div>
         </div>
         <div class="plot-wrap">
           <canvas id="plot" aria-label="Live plot"></canvas>
@@ -72,17 +72,17 @@ export function mountSimPage(
   transport.innerHTML = `
     <button type="button" class="btn primary" data-play aria-pressed="${playing}">${playing ? "Pause" : "Play"}</button>
     <button type="button" class="btn" data-reset>Reset</button>
-    <div class="control" style="min-width:180px">
+    <div class="control transport-field">
       <label for="int">Integrator</label>
       <select id="int">${METHOD_LIST.map(
         (m) => `<option value="${m.id}" ${m.id === method ? "selected" : ""}>${m.name}</option>`,
       ).join("")}</select>
     </div>
-    <div class="control" style="min-width:160px">
+    <div class="control transport-field">
       <label for="dt">Δt <span class="value" data-dt-val>${dt.toFixed(4)}</span></label>
       <input id="dt" type="range" min="0.0005" max="0.04" step="0.0005" value="${dt}" />
     </div>
-    <div class="control" style="min-width:160px">
+    <div class="control transport-field">
       <label for="speed">Speed <span class="value" data-speed-val>${speed.toFixed(2)}×</span></label>
       <input id="speed" type="range" min="0.1" max="4" step="0.1" value="${speed}" />
     </div>

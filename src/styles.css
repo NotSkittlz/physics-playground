@@ -521,11 +521,30 @@ a:focus-visible {
   max-width: 420px;
   width: 100%;
   box-shadow: var(--shadow);
+  position: relative;
+}
+.help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 .help-card h2 {
   font-family: var(--font-display);
-  margin: 0 0 12px;
+  margin: 0;
   font-weight: 500;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .help-card dl {
   display: grid;

@@ -31,7 +31,10 @@ export function startApp(root: HTMLElement): void {
     </div>
     <div class="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
       <div class="help-card">
-        <h2 id="help-title">Keyboard</h2>
+        <div class="help-head">
+          <h2 id="help-title">Keyboard</h2>
+          <button type="button" class="icon-btn" data-help-close aria-label="Close help">×</button>
+        </div>
         <dl>
           <dt>Space</dt><dd>Play / pause</dd>
           <dt>R</dt><dd>Reset</dd>
@@ -45,14 +48,36 @@ export function startApp(root: HTMLElement): void {
         </dl>
       </div>
     </div>
+    <div class="sr-only" aria-live="polite" aria-atomic="true" data-live-readout></div>
   `;
 
   const main = root.querySelector("#main") as HTMLElement;
   const perf = root.querySelector(".perf") as HTMLElement;
   const help = root.querySelector(".help") as HTMLElement;
+  const helpClose = root.querySelector("[data-help-close]") as HTMLButtonElement;
+  const liveReadout = root.querySelector("[data-live-readout]") as HTMLElement;
   let page: SimPageHandle | null = null;
   let perfOn = false;
+  let helpPrev: HTMLElement | null = null;
+  let liveAt = 0;
   const worker = new PhysicsWorker();
+
+  const helpFocusables = (): HTMLElement[] =>
+    Array.from(help.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )).filter((el) => !el.hasAttribute("disabled") && el.tabIndex !== -1);
+
+  const setHelpOpen = (open: boolean): void => {
+    if (open) {
+      helpPrev = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      help.hidden = false;
+      (helpFocusables()[0] ?? helpClose).focus();
+    } else {
+      help.hidden = true;
+      helpPrev?.focus();
+      helpPrev = null;
+    }
+  };
 
   const route = (): void => {
     page?.destroy();
@@ -79,10 +104,25 @@ export function startApp(root: HTMLElement): void {
     else route();
   });
   root.querySelector("[data-help]")!.addEventListener("click", () => {
-    help.hidden = !help.hidden;
+    setHelpOpen(help.hidden);
   });
+  helpClose.addEventListener("click", () => setHelpOpen(false));
   help.addEventListener("click", (ev) => {
-    if (ev.target === help) help.hidden = true;
+    if (ev.target === help) setHelpOpen(false);
+  });
+  help.addEventListener("keydown", (ev) => {
+    if (help.hidden || ev.key !== "Tab") return;
+    const nodes = helpFocusables();
+    if (nodes.length === 0) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (ev.shiftKey && document.activeElement === first) {
+      last.focus();
+      ev.preventDefault();
+    } else if (!ev.shiftKey && document.activeElement === last) {
+      first.focus();
+      ev.preventDefault();
+    }
   });
   const perfBtn = root.querySelector("[data-perf]") as HTMLButtonElement;
   perfBtn.addEventListener("click", () => {
@@ -102,12 +142,15 @@ export function startApp(root: HTMLElement): void {
       return;
     }
     if (ev.key === "?" || (ev.key === "/" && ev.shiftKey)) {
-      help.hidden = !help.hidden;
+      setHelpOpen(help.hidden);
       ev.preventDefault();
       return;
     }
     if (ev.key === "Escape") {
-      help.hidden = true;
+      if (!help.hidden) {
+        setHelpOpen(false);
+        ev.preventDefault();
+      }
       return;
     }
     if (ev.key === "t" || ev.key === "T") {
@@ -146,12 +189,17 @@ export function startApp(root: HTMLElement): void {
   const fps = perf.querySelector("[data-fps]") as HTMLElement;
   const sps = perf.querySelector("[data-sps]") as HTMLElement;
   const ms = perf.querySelector("[data-ms]") as HTMLElement;
-  const pump = (): void => {
+  const pump = (now: number): void => {
     const s = page?.stats();
     if (s && perfOn) {
       fps.textContent = s.fps.toFixed(0);
       sps.textContent = s.stepsPerSec.toFixed(0);
       ms.textContent = s.frameMs.toFixed(2);
+    }
+    if (page && now - liveAt > 1000) {
+      liveAt = now;
+      const world = document.getElementById("world-readout");
+      if (world) liveReadout.textContent = world.textContent ?? "";
     }
     requestAnimationFrame(pump);
   };
