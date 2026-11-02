@@ -1,6 +1,7 @@
 import { HiDpiCanvas, readPalette } from "../core/canvas.ts";
 import { SimLoop, type LoopStats } from "../core/loop.ts";
-import { coerceBool, coerceNumber, replaceHash } from "../core/url.ts";
+import { replaceHash } from "../core/url.ts";
+import { clampDt, clampMethod, clampPlay, clampSimParams, clampSpeed } from "../core/hash-params.ts";
 import { renderWriteup } from "../core/writeup.ts";
 import { reducedMotion } from "../core/theme.ts";
 import { METHOD_LIST } from "../integrators/step.ts";
@@ -24,13 +25,14 @@ export function mountSimPage(
   meta: SimMeta,
   urlParams: Record<string, string>,
 ): SimPageHandle {
-  const params: Record<string, ParamValue> = { ...meta.defaults, ...castParams(urlParams, meta) };
-  let method: MethodId = isMethodId(urlParams.int ?? "")
-    ? (urlParams.int as MethodId)
-    : (meta.method ?? "verlet");
-  let dt = coerceNumber(urlParams.dt, meta.dt ?? DEFAULT_DT);
-  let speed = coerceNumber(urlParams.speed, DEFAULT_SPEED);
-  let playing = coerceBool(urlParams.play, true);
+  const params: Record<string, ParamValue> = {
+    ...meta.defaults,
+    ...clampSimParams(urlParams, meta),
+  };
+  let method: MethodId = clampMethod(urlParams.int, meta.method ?? "verlet");
+  let dt = clampDt(urlParams.dt, meta.dt ?? DEFAULT_DT);
+  let speed = clampSpeed(urlParams.speed, DEFAULT_SPEED);
+  let playing = clampPlay(urlParams.play, true);
   let latestStats: LoopStats | null = null;
 
   root.innerHTML = `
@@ -275,18 +277,6 @@ export function mountSimPage(
       return latestStats;
     },
   };
-}
-
-function castParams(url: Record<string, string>, meta: SimMeta): Record<string, ParamValue> {
-  const out: Record<string, ParamValue> = {};
-  for (const c of meta.controls) {
-    if (!(c.key in url)) continue;
-    if (c.kind === "range") out[c.key] = Number(url[c.key]);
-    else if (c.kind === "toggle") out[c.key] = url[c.key] === "1" || url[c.key] === "true";
-    else out[c.key] = url[c.key];
-  }
-  if (url.c) out.c = url.c;
-  return out;
 }
 
 function objectify(params: Record<string, ParamValue>): Record<string, string> {
