@@ -148,8 +148,11 @@ export class DoublePendulumSim implements Simulation {
     ctx.stroke();
     drawDisc(ctx, x1, y1, 8, this.pal.paper, color);
     drawDisc(ctx, x2, y2, 11, color, this.pal.ink);
-    trail.push(x2, y2);
-    trail.stroke(ctx, color, 1.3, !this.reduced);
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.scale(scale, -scale);
+    trail.stroke(ctx, color, 1.3 / scale, !this.reduced);
+    ctx.restore();
   }
 
   private sample(): void {
@@ -158,6 +161,10 @@ export class DoublePendulumSim implements Simulation {
     this.energySeries.push(s.t, this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0);
     const d = Math.hypot(s.q[0] - this.b.curr.q[0], s.q[1] - this.b.curr.q[1]);
     this.sep.push(s.t, d);
+    const ca = doublePendulumCartesian(this.p, this.a.curr.q[0], this.a.curr.q[1]);
+    const cb = doublePendulumCartesian(this.p, this.b.curr.q[0], this.b.curr.q[1]);
+    this.trailA.push(ca.x2, ca.y2);
+    this.trailB.push(cb.x2, cb.y2);
   }
 }
 

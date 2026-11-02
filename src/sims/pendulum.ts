@@ -109,9 +109,10 @@ export class PendulumSim implements Simulation {
     ctx.stroke();
     drawDisc(ctx, px, py, 4, this.pal.brass);
     drawDisc(ctx, bobX, bobY, 14, this.pal.paper, this.pal.brass);
-    this.trail.push(bobX, bobY);
     ctx.save();
-    this.trail.stroke(ctx, this.pal.sky, 1.5, !this.reduced);
+    ctx.translate(px, py);
+    ctx.scale(scale, scale);
+    this.trail.stroke(ctx, this.pal.sky, 1.5 / scale, !this.reduced);
     ctx.restore();
   }
 
@@ -160,6 +161,7 @@ export class PendulumSim implements Simulation {
 
   private sample(th: number, om: number, t: number): void {
     this.phase.push(wrapPi(th), om);
+    this.trail.push(this.p.L * Math.sin(th), this.p.L * Math.cos(th));
     const E = pendulumEnergy(this.p, th, om);
     this.energySeries.push(t, this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0);
     if (this.p.driveAmp > 0 && this.p.driveFreq > 0) {

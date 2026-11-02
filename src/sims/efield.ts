@@ -136,8 +136,11 @@ export class EFieldSim implements Simulation {
     this.body.interpolate(alpha);
     const q = this.body.draw.q;
     const p = worldToScreen(q[0], q[1], cx, cy, scale);
-    this.trail.push(p.x, p.y);
-    this.trail.stroke(ctx, this.pal.sage, 1.6, !this.reduced);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, -scale);
+    this.trail.stroke(ctx, this.pal.sage, 1.6 / scale, !this.reduced);
+    ctx.restore();
     drawDisc(ctx, p.x, p.y, 6, this.pal.sage, this.pal.ink);
 
     for (const c of this.charges) {
@@ -224,6 +227,7 @@ export class EFieldSim implements Simulation {
     const s = this.body.curr;
     const E = efieldParticleEnergy(this.spec(), s.q, s.v);
     this.energySeries.push(s.t, this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0);
+    this.trail.push(s.q[0], s.q[1]);
   }
 
   private syncWorld(w: number, h: number): void {
