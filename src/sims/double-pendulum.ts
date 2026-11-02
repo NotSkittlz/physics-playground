@@ -77,9 +77,9 @@ export class DoublePendulumSim implements Simulation {
   drawPlot(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     if (this.plot === "energy") {
       drawPlot(ctx, w, h, this.pal, [this.energySeries], {
-        title: "Energy of pendulum A",
+        title: "Relative energy error of pendulum A",
         xLabel: "t",
-        yLabel: "E",
+        yLabel: "(E − E₀)/|E₀|",
       });
     } else {
       drawPlot(ctx, w, h, this.pal, [this.sep], {
@@ -91,7 +91,7 @@ export class DoublePendulumSim implements Simulation {
   }
 
   plotCaption(): string {
-    return this.plot === "energy" ? "Energy" : "Sensitivity |Δθ|";
+    return this.plot === "energy" ? "Relative energy error" : "Sensitivity |Δθ|";
   }
 
   energy(): number {
@@ -139,7 +139,8 @@ export class DoublePendulumSim implements Simulation {
 
   private sample(): void {
     const s = this.a.curr;
-    this.energySeries.push(s.t, doublePendulumEnergy(this.p, s.q, s.v));
+    const E = doublePendulumEnergy(this.p, s.q, s.v);
+    this.energySeries.push(s.t, this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0);
     const d = Math.hypot(s.q[0] - this.b.curr.q[0], s.q[1] - this.b.curr.q[1]);
     this.sep.push(s.t, d);
   }

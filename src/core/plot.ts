@@ -102,17 +102,13 @@ export function drawPlot(
     ctx.fillText("waiting for samples…", PAD.l, PAD.t + innerH / 2);
     return;
   }
-  if (xmax - xmin < 1e-12) {
-    xmin -= 1;
-    xmax += 1;
-  }
-  if (ymax - ymin < 1e-12) {
-    ymin -= 1;
-    ymax += 1;
-  }
-  const yPad = 0.08 * (ymax - ymin);
-  ymin -= yPad;
-  ymax += yPad;
+  const xPad = paddedSpan(xmin, xmax);
+  xmin = xPad.min;
+  xmax = xPad.max;
+  const yPad = paddedSpan(ymin, ymax);
+  ymin = yPad.min;
+  ymax = yPad.max;
+  const ySpan = ymax - ymin;
 
   const xTo = (x: number) => PAD.l + ((x - xmin) / (xmax - xmin)) * innerW;
   const yTo = (y: number) => PAD.t + ((ymax - y) / (ymax - ymin)) * innerH;
@@ -129,12 +125,12 @@ export function drawPlot(
   ctx.font = "11px 'IBM Plex Mono', monospace";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  ctx.fillText(formatTick(ymax), PAD.l - 6, PAD.t);
-  ctx.fillText(formatTick(ymin), PAD.l - 6, PAD.t + innerH);
+  ctx.fillText(formatTick(ymax, ySpan), PAD.l - 6, PAD.t);
+  ctx.fillText(formatTick(ymin, ySpan), PAD.l - 6, PAD.t + innerH);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  ctx.fillText(formatTick(xmin), PAD.l, PAD.t + innerH + 6);
-  ctx.fillText(formatTick(xmax), PAD.l + innerW, PAD.t + innerH + 6);
+  ctx.fillText(formatTick(xmin, xmax - xmin), PAD.l, PAD.t + innerH + 6);
+  ctx.fillText(formatTick(xmax, xmax - xmin), PAD.l + innerW, PAD.t + innerH + 6);
 
   ctx.fillStyle = pal.muted;
   ctx.font = "11px 'Source Sans 3', sans-serif";
@@ -199,9 +195,26 @@ export function wrappedSegment(prev: number, curr: number, wrap: number): boolea
   return Math.abs(curr - prev) > wrap * 0.5;
 }
 
-function formatTick(v: number): string {
+/** Axis padding. Degenerate spans get a relative bump so the scale is defined. */
+export function paddedSpan(min: number, max: number): { min: number; max: number } {
+  let lo = min;
+  let hi = max;
+  let span = hi - lo;
+  if (!(span > 0)) {
+    const mag = Math.max(Math.abs(lo), Math.abs(hi), 1);
+    lo -= mag * 1e-3;
+    hi += mag * 1e-3;
+    span = hi - lo;
+  }
+  const pad = 0.08 * span;
+  return { min: lo - pad, max: hi + pad };
+}
+
+/** Tick label. Uses scientific notation when the axis span is tiny. */
+export function formatTick(v: number, span = 1): string {
   if (!Number.isFinite(v)) return "–";
   const a = Math.abs(v);
+  if (span > 0 && span < 0.01) return v.toExponential(1);
   if (a !== 0 && (a >= 1e4 || a < 1e-3)) return v.toExponential(1);
   if (a >= 10) return v.toFixed(1);
   return v.toFixed(2);

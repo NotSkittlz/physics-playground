@@ -151,14 +151,14 @@ export class EFieldSim implements Simulation {
 
   drawPlot(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     drawPlot(ctx, w, h, this.pal, [this.energySeries], {
-      title: "Test-particle energy  T + qV",
+      title: "Relative energy error  (T + qV)",
       xLabel: "t",
-      yLabel: "E",
+      yLabel: "(E − E₀)/|E₀|",
     });
   }
 
   plotCaption(): string {
-    return "Test-particle energy";
+    return "Relative energy error";
   }
 
   energy(): number {
@@ -212,7 +212,8 @@ export class EFieldSim implements Simulation {
 
   private sample(): void {
     const s = this.body.curr;
-    this.energySeries.push(s.t, efieldParticleEnergy(this.spec(), s.q, s.v));
+    const E = efieldParticleEnergy(this.spec(), s.q, s.v);
+    this.energySeries.push(s.t, this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0);
   }
 
   private syncWorld(w: number, h: number): void {

@@ -102,9 +102,9 @@ export class PendulumSim implements Simulation {
   drawPlot(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     if (this.plot === "energy") {
       drawPlot(ctx, w, h, this.pal, [this.energySeries], {
-        title: "Mechanical energy",
+        title: "Relative energy error",
         xLabel: "t",
-        yLabel: "E",
+        yLabel: "(E − E₀)/|E₀|",
       });
     } else if (this.plot === "poincare") {
       drawPlot(ctx, w, h, this.pal, [this.poincare], {
@@ -124,7 +124,11 @@ export class PendulumSim implements Simulation {
   }
 
   plotCaption(): string {
-    return this.plot === "poincare" ? "Poincaré section" : this.plot === "energy" ? "Energy" : "Phase portrait";
+    return this.plot === "poincare"
+      ? "Poincaré section"
+      : this.plot === "energy"
+        ? "Relative energy error"
+        : "Phase portrait";
   }
 
   energy(): number {
@@ -140,7 +144,8 @@ export class PendulumSim implements Simulation {
 
   private sample(th: number, om: number, t: number): void {
     this.phase.push(wrapPi(th), om);
-    this.energySeries.push(t, pendulumEnergy(this.p, th, om));
+    const E = pendulumEnergy(this.p, th, om);
+    this.energySeries.push(t, this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0);
     if (this.p.driveAmp > 0 && this.p.driveFreq > 0) {
       const T = (2 * Math.PI) / this.p.driveFreq;
       const n = Math.floor(t / T + 1e-12);
