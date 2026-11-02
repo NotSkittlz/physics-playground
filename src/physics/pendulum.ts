@@ -48,10 +48,11 @@ export function pendulumSmallAnglePeriod(p: Pick<PendulumParams, "g" | "L">): nu
 
 /**
  * Mechanical energy per unit mass, with V = 0 at the hanging-down rest point.
- * Not conserved once damping or driving is on.
+ * Uses ½ g L θ² when `linear` so the energy matches the oscillator being
+ * integrated. Not conserved once damping or driving is on.
  */
 export function pendulumEnergy(p: PendulumParams, theta: number, omega: number): number {
   const kinetic = 0.5 * (p.L * omega) ** 2;
-  const potential = p.g * p.L * (1 - Math.cos(theta));
+  const potential = p.linear ? 0.5 * p.g * p.L * theta * theta : p.g * p.L * (1 - Math.cos(theta));
   return kinetic + potential;
 }

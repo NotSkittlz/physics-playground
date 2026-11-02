@@ -153,6 +153,21 @@ describe("small-angle pendulum", () => {
     expect(state.v[0]).toBeCloseTo(0, 3);
     expect(pendulumEnergy(p, 0, 0)).toBe(0);
   });
+
+  it("uses ½ g L θ² when linear so RK4 does not fake-drift", () => {
+    const p = { g: 1, L: 1, gamma: 0, driveAmp: 0, driveFreq: 0, linear: true };
+    const sys = pendulumSystem(p);
+    const state = new PhaseState(1);
+    state.set([1.2], [0], 0);
+    const E0 = pendulumEnergy(p, 1.2, 0);
+    expect(E0).toBeCloseTo(0.5 * 1.2 * 1.2, 12);
+    const cosineE0 = 0.5 * 0 + 1 * (1 - Math.cos(1.2));
+    expect(Math.abs(cosineE0 - E0) / E0).toBeGreaterThan(0.1);
+    const scratch = new Scratch();
+    advance(STEPPERS.rk4, sys, state, 8, 0.002, scratch);
+    const E1 = pendulumEnergy(p, state.q[0], state.v[0]);
+    expect(Math.abs(E1 - E0) / E0).toBeLessThan(1e-8);
+  });
 });
 
 describe("coupled-oscillator normal modes", () => {
