@@ -66,15 +66,25 @@ export class EFieldSim implements Simulation {
   private E0 = 0;
 
   reset(params: Record<string, ParamValue>, frame: SimFrame): void {
-    this.apply(params, frame);
+    this.applyView(params, frame);
+    this.rebuild(params, frame);
   }
 
   apply(params: Record<string, ParamValue>, frame: SimFrame): void {
+    this.applyView(params, frame);
+    if (this.energySeries) this.energySeries.color = this.pal.brass;
+    this.dirty = true;
+  }
+
+  private applyView(params: Record<string, ParamValue>, frame: SimFrame): void {
     this.pal = frame.palette;
     this.reduced = frame.reducedMotion;
     this.showEq = bool(params, "eq", true);
     this.showField = bool(params, "field", true);
     this.showWash = bool(params, "wash", true);
+  }
+
+  private rebuild(params: Record<string, ParamValue>, frame: SimFrame): void {
     this.testQ = num(params, "tq", 0.4);
     this.softening2 = num(params, "soft", 0.05) ** 2;
     const encoded = str(params, "c", "");
@@ -464,9 +474,9 @@ const META: SimMeta = {
     },
     { key: "tq", kind: "range", label: "Test charge q", min: -2, max: 2, step: 0.05 },
     { key: "soft", kind: "range", label: "Softening", min: 0.02, max: 0.18, step: 0.005 },
-    { key: "eq", kind: "toggle", label: "Equipotentials" },
-    { key: "field", kind: "toggle", label: "Field arrows" },
-    { key: "wash", kind: "toggle", label: "Potential wash" },
+    { key: "eq", kind: "toggle", cosmetic: true, label: "Equipotentials" },
+    { key: "field", kind: "toggle", cosmetic: true, label: "Field arrows" },
+    { key: "wash", kind: "toggle", cosmetic: true, label: "Potential wash" },
   ],
   writeup: `## Coulomb's law in the plane
 

@@ -13,6 +13,7 @@ export interface SimPageHandle {
   destroy(): void;
   togglePlay(): void;
   reset(): void;
+  recolor(): void;
   setSpeed(mult: number): void;
   stats(): LoopStats | null;
 }
@@ -206,8 +207,12 @@ export function mountSimPage(
       const label = controlsEl.querySelector(`[data-val="${key}"]`);
       if (label) label.textContent = formatVal(Number(t.value));
     } else params[key] = t.value;
-    sim.reset(params, frameOf());
-    loop.resetAccumulator();
+    const cosmetic = meta.controls.some((c) => c.key === key && c.cosmetic);
+    if (cosmetic) sim.apply(params, frameOf());
+    else {
+      sim.reset(params, frameOf());
+      loop.resetAccumulator();
+    }
     syncCompareUi();
     syncUrl();
   });
@@ -264,6 +269,9 @@ export function mountSimPage(
     reset() {
       sim.reset(params, frameOf());
       loop.resetAccumulator();
+    },
+    recolor() {
+      sim.apply(params, frameOf());
     },
     setSpeed(mult: number) {
       speed = Math.min(4, Math.max(0.1, speed * mult));

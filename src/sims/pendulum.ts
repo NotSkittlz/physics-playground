@@ -27,13 +27,7 @@ export class PendulumSim implements Simulation {
   private E0 = 0;
 
   reset(params: Record<string, ParamValue>, frame: SimFrame): void {
-    this.apply(params, frame);
-  }
-
-  apply(params: Record<string, ParamValue>, frame: SimFrame): void {
-    this.pal = frame.palette;
-    this.reduced = frame.reducedMotion;
-    this.plot = parsePlot(params.plot);
+    this.applyView(params, frame);
     this.p = {
       g: 1,
       L: num(params, "L", 1),
@@ -52,6 +46,24 @@ export class PendulumSim implements Simulation {
     this.E0 = pendulumEnergy(this.p, th0, 0);
     this.lastStrobe = -1;
     this.sample(this.body.curr.q[0], this.body.curr.v[0], 0);
+  }
+
+  apply(params: Record<string, ParamValue>, frame: SimFrame): void {
+    this.applyView(params, frame);
+    this.recolor();
+  }
+
+  private applyView(params: Record<string, ParamValue>, frame: SimFrame): void {
+    this.pal = frame.palette;
+    this.reduced = frame.reducedMotion;
+    this.plot = parsePlot(params.plot);
+  }
+
+  private recolor(): void {
+    if (!this.energySeries) return;
+    this.energySeries.color = this.pal.brass;
+    this.phase.color = this.pal.sky;
+    this.poincare.color = this.pal.rose;
   }
 
   advance(steps: number, dt: number): void {
@@ -181,6 +193,7 @@ const META: SimMeta = {
     {
       key: "plot",
       kind: "select",
+      cosmetic: true,
       label: "Plot",
       options: [
         { value: "phase", label: "Phase portrait" },

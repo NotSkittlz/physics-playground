@@ -7,7 +7,7 @@ export class RingSeries {
   readonly cap: number;
   length = 0;
   head = 0;
-  readonly color: string;
+  color: string;
   readonly label: string;
 
   constructor(cap: number, color: string, label: string) {

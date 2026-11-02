@@ -27,13 +27,28 @@ export class DoublePendulumSim implements Simulation {
   private plot: "sep" | "energy" = "sep";
 
   reset(params: Record<string, ParamValue>, frame: SimFrame): void {
-    this.apply(params, frame);
+    this.applyView(params, frame);
+    this.rebuild(params, frame);
   }
 
   apply(params: Record<string, ParamValue>, frame: SimFrame): void {
+    this.applyView(params, frame);
+    this.recolor();
+  }
+
+  private applyView(params: Record<string, ParamValue>, frame: SimFrame): void {
     this.pal = frame.palette;
     this.reduced = frame.reducedMotion;
     this.plot = params.plot === "energy" ? "energy" : "sep";
+  }
+
+  private recolor(): void {
+    if (!this.energySeries) return;
+    this.energySeries.color = this.pal.brass;
+    this.sep.color = this.pal.rose;
+  }
+
+  private rebuild(params: Record<string, ParamValue>, frame: SimFrame): void {
     this.p = {
       g: 9.8,
       m1: num(params, "m1", 1),
@@ -163,6 +178,7 @@ const META: SimMeta = {
     {
       key: "plot",
       kind: "select",
+      cosmetic: true,
       label: "Plot",
       options: [
         { value: "sep", label: "Separation |Δθ|" },

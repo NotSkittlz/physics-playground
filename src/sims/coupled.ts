@@ -24,11 +24,19 @@ export class CoupledSim implements Simulation {
   private mode = "beat";
 
   reset(params: Record<string, ParamValue>, frame: SimFrame): void {
-    this.apply(params, frame);
+    this.pal = frame.palette;
+    this.rebuild(params, frame);
   }
 
-  apply(params: Record<string, ParamValue>, frame: SimFrame): void {
+  apply(_params: Record<string, ParamValue>, frame: SimFrame): void {
     this.pal = frame.palette;
+    if (this.x1) {
+      this.x1.color = this.pal.brass;
+      this.x2.color = this.pal.sky;
+    }
+  }
+
+  private rebuild(params: Record<string, ParamValue>, frame: SimFrame): void {
     this.p = {
       m1: num(params, "m1", 1),
       m2: num(params, "m2", 1),

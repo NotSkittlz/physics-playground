@@ -11,6 +11,8 @@ export interface RangeControl {
   max: number;
   step: number;
   unit?: string;
+  /** True when changing this control must not reset the ODE state. */
+  cosmetic?: boolean;
 }
 
 export interface SelectControl {
@@ -18,12 +20,14 @@ export interface SelectControl {
   kind: "select";
   label: string;
   options: { value: string; label: string }[];
+  cosmetic?: boolean;
 }
 
 export interface ToggleControl {
   key: string;
   kind: "toggle";
   label: string;
+  cosmetic?: boolean;
 }
 
 export type Control = RangeControl | SelectControl | ToggleControl;

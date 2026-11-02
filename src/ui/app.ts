@@ -75,7 +75,8 @@ export function startApp(root: HTMLElement): void {
 
   root.querySelector("[data-theme]")!.addEventListener("click", () => {
     toggleTheme();
-    route();
+    if (page) page.recolor();
+    else route();
   });
   root.querySelector("[data-help]")!.addEventListener("click", () => {
     help.hidden = !help.hidden;
@@ -111,7 +112,8 @@ export function startApp(root: HTMLElement): void {
     }
     if (ev.key === "t" || ev.key === "T") {
       toggleTheme();
-      route();
+      if (page) page.recolor();
+      else route();
       return;
     }
     if (ev.key === "p" || ev.key === "P") {

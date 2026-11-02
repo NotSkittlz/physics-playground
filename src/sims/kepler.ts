@@ -46,14 +46,21 @@ export class KeplerSim implements Simulation {
   private sampleAcc = 0;
 
   reset(p: Record<string, ParamValue>, frame: SimFrame): void {
-    this.pal = frame.palette;
-    this.reduced = frame.reducedMotion;
-    this.apply(p, frame);
+    this.applyView(frame);
+    this.rebuild(p, frame);
   }
 
-  apply(p: Record<string, ParamValue>, frame: SimFrame): void {
+  apply(_p: Record<string, ParamValue>, frame: SimFrame): void {
+    this.applyView(frame);
+    this.recolor();
+  }
+
+  private applyView(frame: SimFrame): void {
     this.pal = frame.palette;
     this.reduced = frame.reducedMotion;
+  }
+
+  private rebuild(p: Record<string, ParamValue>, frame: SimFrame): void {
     this.compare = bool(p, "cmp", true);
     this.params = {
       G: 1,
@@ -85,6 +92,14 @@ export class KeplerSim implements Simulation {
     this.sampleAcc = 0;
     this.pushTrails();
     this.sampleEnergies();
+  }
+
+  private recolor(): void {
+    for (let i = 0; i < this.series.length; i++) {
+      const id = this.ids[i];
+      const key = COMPARE_COLORS[id] ?? "brass";
+      this.series[i].color = this.pal[key];
+    }
   }
 
   advance(steps: number, dt: number): void {
