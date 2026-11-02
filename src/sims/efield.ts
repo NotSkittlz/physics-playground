@@ -280,8 +280,9 @@ export class EFieldSim implements Simulation {
     if (span < 1e-12) return;
     ctx.lineWidth = 1;
     ctx.strokeStyle = "rgba(236,231,220,0.35)";
-    for (let ℓ = 1; ℓ < LEVELS; ℓ++) {
-      const level = vmin + (span * ℓ) / LEVELS;
+    for (const level of equipotentialLevels(vmin, vmax, LEVELS)) {
+      if (level === 0) ctx.lineWidth = 1.4;
+      else ctx.lineWidth = 1;
       march(ctx, this.V, NX, NY, w, h, level);
     }
   }
@@ -304,6 +305,23 @@ export class EFieldSim implements Simulation {
       }
     }
   }
+}
+
+/**
+ * Marching-squares levels across [vmin, vmax]. Includes V = 0 when the
+ * potential changes sign (the dipole mid-plane), which a uniform partition
+ * of 11 bins otherwise skips.
+ */
+export function equipotentialLevels(vmin: number, vmax: number, count: number): number[] {
+  const span = vmax - vmin;
+  if (!(span > 0) || count < 2) return [];
+  const levels: number[] = [];
+  for (let i = 1; i < count; i++) levels.push(vmin + (span * i) / count);
+  if (vmin < 0 && vmax > 0 && !levels.some((l) => l === 0)) {
+    levels.push(0);
+    levels.sort((a, b) => a - b);
+  }
+  return levels;
 }
 
 function tooClose(x: number, y: number, charges: PointCharge[], d: number): boolean {
