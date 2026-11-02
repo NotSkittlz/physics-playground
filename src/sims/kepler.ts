@@ -9,6 +9,7 @@ import {
   keplerAngularMomentum,
   keplerEnergy,
   keplerInitialState,
+  keplerInnerSteps,
   keplerPeriod,
   keplerSystem,
   type KeplerParams,
@@ -103,8 +104,17 @@ export class KeplerSim implements Simulation {
   }
 
   advance(steps: number, dt: number): void {
-    for (let b = 0; b < this.bodies.length; b++) {
-      this.bodies[b].advance(steps, dt);
+    if (steps <= 0) return;
+    for (let s = 0; s < steps; s++) {
+      const last = s === steps - 1;
+      for (const body of this.bodies) {
+        const q = body.curr.q;
+        const r = Math.hypot(q[2] - q[0], q[3] - q[1]);
+        const n = keplerInnerSteps(this.params, r, dt);
+        const h = dt / n;
+        if (last) body.prev.copyFrom(body.curr);
+        body.stepMany(n, h);
+      }
     }
     this.sampleAcc += steps;
     if (this.sampleAcc >= 2) {
@@ -264,7 +274,7 @@ The vis-viva relation $v^2 = G(m_1+m_2)\\,(2/r - 1/a)$ and Kepler's third law $T
 ### What to try
 
 - Turn **Compare integrators** on and let one period elapse. Explicit Euler (rose) walks off the ellipse; Verlet (sage) and RK4 (sky) hold it.
-- Raise the eccentricity toward $0.9$. Periapsis is a stiff moment: the force spikes, and a fixed step that looked fine on a circle starts to lie.
+- Raise the eccentricity toward $0.92$. Periapsis is a stiff moment: the force spikes, and a fixed step that looked fine on a circle starts to lie. The playground splits $\\Delta t$ into equal inner steps while $r$ is small, so Verlet stays honest at the default step.
 - Watch $\\Delta E/E$ in the plot, not just the picture. Geometry can look plausible while the energy is already ruined.
 
 ### What the integrator changes

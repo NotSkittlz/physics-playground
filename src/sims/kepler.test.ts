@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Palette } from "../core/canvas.ts";
+import { KEPLER_DEFAULTS, keplerPeriod } from "../physics/kepler.ts";
 import { KeplerSim } from "./kepler.ts";
 import type { SimFrame } from "./types.ts";
 
@@ -44,5 +45,20 @@ describe("Kepler compare readout", () => {
     expect(text).toMatch(/ΔE\/E = /);
     expect(text).toMatch(/ΔL\/L = /);
     expect(text).not.toMatch(/Euler ΔE/);
+  });
+
+  it("holds energy and angular momentum at e=0.92, dt=0.008 (Verlet)", () => {
+    const sim = new KeplerSim();
+    sim.reset({ e: 0.92, m1: 1, m2: 1, a: 1, cmp: false }, frame("verlet"));
+    const dt = 0.008;
+    const T = keplerPeriod({ ...KEPLER_DEFAULTS, e: 0.92 });
+    sim.advance(Math.ceil(T / dt), dt);
+    const text = sim.readout();
+    const dE = Number(text.match(/ΔE\/E = ([^\s]+)/)?.[1]);
+    const dL = Number(text.match(/ΔL\/L = ([^\s]+)/)?.[1]);
+    expect(Number.isFinite(dE)).toBe(true);
+    expect(Number.isFinite(dL)).toBe(true);
+    expect(Math.abs(dE)).toBeLessThan(5e-3);
+    expect(Math.abs(dL)).toBeLessThan(5e-4);
   });
 });

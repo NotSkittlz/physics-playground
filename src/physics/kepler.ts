@@ -96,3 +96,26 @@ export function keplerAngularMomentum(
 export function keplerSemiMajorFromEnergy(p: KeplerParams, energy: number): number {
   return -(p.G * p.m1 * p.m2) / (2 * energy);
 }
+
+const INNER_STEPS_MAX = 24;
+/** Inner step ≲ local dynamical time / this, so periapsis stays resolved. */
+const INNER_TAU_DIVISOR = 16;
+
+/**
+ * How many equal inner steps to take for one outer `dt`, given the current
+ * separation. Near periapsis of a high-e ellipse the local time
+ * τ = √(r³/μ) collapses; a fixed 0.008 step is then a large fraction of τ.
+ * Equal inner steps keep Verlet symplectic on each substep. Apoapsis and
+ * low-e orbits return 1.
+ */
+export function keplerInnerSteps(p: KeplerParams, r: number, dt: number): number {
+  if (!(dt > 0)) return 1;
+  const mu = p.G * (p.m1 + p.m2);
+  if (!(mu > 0)) return 1;
+  const sep = Math.max(r, 1e-8);
+  const tau = Math.sqrt((sep * sep * sep) / mu);
+  const h = tau / INNER_TAU_DIVISOR;
+  const n = Math.ceil(dt / Math.max(h, 1e-12));
+  if (n <= 1) return 1;
+  return n > INNER_STEPS_MAX ? INNER_STEPS_MAX : n;
+}

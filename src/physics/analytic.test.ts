@@ -22,6 +22,7 @@ import {
   keplerAngularMomentum,
   keplerEnergy,
   keplerInitialState,
+  keplerInnerSteps,
   keplerPeriod,
   keplerSemiMajorFromEnergy,
   keplerSystem,
@@ -98,6 +99,41 @@ describe("Kepler two-body analytics", () => {
     const cx = (m1 * state.q[0] + m2 * state.q[2]) / (m1 + m2);
     const cy = (m1 * state.q[1] + m2 * state.q[3]) / (m1 + m2);
     expect(Math.hypot(cx, cy)).toBeLessThan(1e-10);
+  });
+
+  it("subdivides Δt only near periapsis of a high-e orbit", () => {
+    const p = { ...KEPLER_DEFAULTS, e: 0.92, a: 1, m1: 1, m2: 1, G: 1 };
+    const dt = 0.008;
+    expect(keplerInnerSteps(p, p.a * (1 + p.e), dt)).toBe(1);
+    expect(keplerInnerSteps(p, p.a, dt)).toBe(1);
+    expect(keplerInnerSteps({ ...KEPLER_DEFAULTS, e: 0 }, 1, dt)).toBe(1);
+    const nPeri = keplerInnerSteps(p, p.a * (1 - p.e), dt);
+    expect(nPeri).toBeGreaterThanOrEqual(4);
+    expect(nPeri).toBeLessThanOrEqual(24);
+  });
+
+  it("conserves energy and L at e=0.92 with periapsis substeps (Verlet, dt=0.008)", () => {
+    const p = { ...KEPLER_DEFAULTS, e: 0.92, a: 1, m1: 1, m2: 1, G: 1 };
+    const sys = keplerSystem(p);
+    const state = new PhaseState(4);
+    keplerInitialState(p, state);
+    const E0 = keplerEnergy(p, state.q, state.v);
+    const L0 = keplerAngularMomentum(p, state.q, state.v);
+    const scratch = new Scratch();
+    const T = keplerPeriod(p);
+    const dt = 0.008;
+    let t = 0;
+    while (t < T - 1e-12) {
+      const r = Math.hypot(state.q[2] - state.q[0], state.q[3] - state.q[1]);
+      const n = keplerInnerSteps(p, r, dt);
+      const h = dt / n;
+      for (let k = 0; k < n; k++) STEPPERS.verlet.step(sys, state, h, scratch);
+      t += dt;
+    }
+    const dE = Math.abs(keplerEnergy(p, state.q, state.v) - E0) / Math.abs(E0);
+    const dL = Math.abs(keplerAngularMomentum(p, state.q, state.v) - L0) / Math.abs(L0);
+    expect(dE).toBeLessThan(5e-3);
+    expect(dL).toBeLessThan(5e-4);
   });
 
   it("explicit Euler spirals: radius and energy drift far more than Verlet", () => {

@@ -9,6 +9,7 @@ export {
   keplerEnergy,
   keplerAngularMomentum,
   keplerSemiMajorFromEnergy,
+  keplerInnerSteps,
 } from "./kepler.ts";
 export {
   type PendulumParams,

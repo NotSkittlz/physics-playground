@@ -34,15 +34,19 @@ export class Integrable {
     this.scratch.resetAdaptive();
   }
 
-  advance(steps: number, dt: number, onStep?: (s: PhaseState) => void): void {
-    if (steps <= 0) return;
-    for (let i = 0; i < steps - 1; i++) {
+  /** Take `steps` of `dt` without moving the interpolation window. */
+  stepMany(steps: number, dt: number, onStep?: (s: PhaseState) => void): void {
+    for (let i = 0; i < steps; i++) {
       this.stepper.step(this.sys, this.curr, dt, this.scratch, this.tol);
       onStep?.(this.curr);
     }
+  }
+
+  advance(steps: number, dt: number, onStep?: (s: PhaseState) => void): void {
+    if (steps <= 0) return;
+    this.stepMany(steps - 1, dt, onStep);
     this.prev.copyFrom(this.curr);
-    this.stepper.step(this.sys, this.curr, dt, this.scratch, this.tol);
-    onStep?.(this.curr);
+    this.stepMany(1, dt, onStep);
   }
 
   interpolate(alpha: number): void {
