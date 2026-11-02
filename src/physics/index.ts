@@ -23,7 +23,9 @@ export {
   COUPLED_DEFAULTS,
   coupledSystem,
   coupledEnergy,
+  coupledEigenmodes,
   coupledNormalFrequencies,
+  coupledModeState,
   coupledSymmetricMode,
   coupledAntisymmetricMode,
 } from "./coupled.ts";

@@ -151,8 +151,8 @@ const META: SimMeta = {
       label: "Initial condition",
       options: [
         { value: "beat", label: "Beat (only m₁ displaced)" },
-        { value: "sym", label: "Symmetric mode" },
-        { value: "anti", label: "Antisymmetric mode" },
+        { value: "sym", label: "Slow eigenmode" },
+        { value: "anti", label: "Fast eigenmode" },
       ],
     },
   ],
@@ -192,10 +192,10 @@ is conserved by the true flow and is a sharp test of the integrator.
 
 ### What to try
 
-- Choose **symmetric mode**. The masses move in lockstep; the coupling spring never changes length.
-- Choose **antisymmetric**. They oppose; the frequency jumps to $\\omega_+$.
+- Choose **slow eigenmode**. For equal masses the coupling spring never changes length.
+- Choose **fast eigenmode**. For equal masses they oppose at $\\omega_+$.
 - Choose **beat** and lower $k_c$. The transfer of motion becomes slow and obvious.
-- Mismatch $m_1$ and $m_2$: the closed-form $\\omega_\\pm$ above no longer apply, and the beat is no longer perfect.
+- Mismatch $m_1$ and $m_2$: the HUD still shows the true $\\omega_\\pm$ from $\\det(K-\\omega^2 M)=0$, and the mode presets use those eigenvectors, so each mass still locks to a single frequency.
 
 ### What the integrator changes
 

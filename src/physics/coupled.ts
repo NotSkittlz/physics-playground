@@ -18,6 +18,13 @@ export const COUPLED_DEFAULTS: CoupledParams = {
   kCoupling: 1,
 };
 
+export interface NormalMode {
+  /** Angular frequency ω = √λ. */
+  omega: number;
+  /** Shape (v1, v2) of M-normalised eigenvector, max |component| = 1. */
+  v: readonly [number, number];
+}
+
 /**
  * Two masses, three springs (wall–m1–m2–wall).
  * q = [x1, x2] measured from each mass's equilibrium.
@@ -37,37 +44,88 @@ export function coupledSystem(p: CoupledParams): System {
 }
 
 export function coupledEnergy(p: CoupledParams, q: ArrayLike<number>, v: ArrayLike<number>): number {
-  const k =
+  return (
     0.5 * p.m1 * v[0] * v[0] +
     0.5 * p.m2 * v[1] * v[1] +
     0.5 * p.kLeft * q[0] * q[0] +
     0.5 * p.kRight * q[1] * q[1] +
-    0.5 * p.kCoupling * (q[0] - q[1]) * (q[0] - q[1]);
-  return k;
+    0.5 * p.kCoupling * (q[0] - q[1]) * (q[0] - q[1])
+  );
 }
 
 /**
- * Normal frequencies for equal masses m = m1 = m2 and equal wall springs k = kLeft = kRight.
- * Symmetric: ω₋ = √(k/m). Antisymmetric: ω₊ = √((k + 2 kc)/m).
+ * Normal modes of the 2×2 generalized eigenproblem (K − ω² M) v = 0.
+ *
+ * M = diag(m1, m2),
+ * K = [[kL+kc, −kc], [−kc, kR+kc]].
+ *
+ * For m1 = m2 and kL = kR the slow mode is symmetric (v1 = v2, ω = √(k/m))
+ * and the fast mode is antisymmetric (v1 = −v2, ω = √((k+2kc)/m)).
  */
-export function coupledNormalFrequencies(p: CoupledParams): { slow: number; fast: number } {
-  const m = p.m1;
-  const k = p.kLeft;
-  const kc = p.kCoupling;
+export function coupledEigenmodes(p: CoupledParams): { slow: NormalMode; fast: NormalMode } {
+  const a = (p.kLeft + p.kCoupling) / p.m1;
+  const b = p.kCoupling / p.m1;
+  const c = p.kCoupling / p.m2;
+  const d = (p.kRight + p.kCoupling) / p.m2;
+  const tr = a + d;
+  const det = a * d - b * c;
+  const disc = Math.max(0, tr * tr - 4 * det);
+  const root = Math.sqrt(disc);
+  const lambdaSlow = 0.5 * (tr - root);
+  const lambdaFast = 0.5 * (tr + root);
   return {
-    slow: Math.sqrt(k / m),
-    fast: Math.sqrt((k + 2 * kc) / m),
+    slow: { omega: Math.sqrt(Math.max(lambdaSlow, 0)), v: eigenvector(a, b, c, d, lambdaSlow) },
+    fast: { omega: Math.sqrt(Math.max(lambdaFast, 0)), v: eigenvector(a, b, c, d, lambdaFast) },
   };
 }
 
-export function coupledSymmetricMode(_p: CoupledParams, amplitude: number, state: PhaseState): void {
-  state.set([amplitude, amplitude], [0, 0], 0);
+function eigenvector(
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  lambda: number,
+): readonly [number, number] {
+  let v1 = 1;
+  let v2: number;
+  if (Math.abs(b) >= Math.abs(c) && Math.abs(b) > 1e-18) {
+    v2 = (a - lambda) / b;
+  } else if (Math.abs(c) > 1e-18) {
+    v2 = 1;
+    v1 = (d - lambda) / c;
+  } else {
+    v2 = Math.abs(a - lambda) <= Math.abs(d - lambda) ? 1 : 0;
+  }
+  const mag = Math.max(Math.abs(v1), Math.abs(v2), 1e-18);
+  return [v1 / mag, v2 / mag];
 }
 
-export function coupledAntisymmetricMode(
-  _p: CoupledParams,
+/** Slow and fast frequencies. Equal-mass equal-k closed form is a special case. */
+export function coupledNormalFrequencies(p: CoupledParams): { slow: number; fast: number } {
+  const { slow, fast } = coupledEigenmodes(p);
+  return { slow: slow.omega, fast: fast.omega };
+}
+
+export function coupledModeState(
+  p: CoupledParams,
+  which: "slow" | "fast",
   amplitude: number,
   state: PhaseState,
 ): void {
-  state.set([amplitude, -amplitude], [0, 0], 0);
+  const mode = coupledEigenmodes(p)[which];
+  state.set([mode.v[0] * amplitude, mode.v[1] * amplitude], [0, 0], 0);
+}
+
+/** Slow eigenmode. Symmetric when m1 = m2 and kLeft = kRight. */
+export function coupledSymmetricMode(p: CoupledParams, amplitude: number, state: PhaseState): void {
+  coupledModeState(p, "slow", amplitude, state);
+}
+
+/** Fast eigenmode. Antisymmetric when m1 = m2 and kLeft = kRight. */
+export function coupledAntisymmetricMode(
+  p: CoupledParams,
+  amplitude: number,
+  state: PhaseState,
+): void {
+  coupledModeState(p, "fast", amplitude, state);
 }

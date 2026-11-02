@@ -6,6 +6,7 @@ import {
   COUPLED_DEFAULTS,
   coupledAntisymmetricMode,
   coupledEnergy,
+  coupledEigenmodes,
   coupledNormalFrequencies,
   coupledSymmetricMode,
   coupledSystem,
@@ -191,6 +192,53 @@ describe("coupled-oscillator normal modes", () => {
     }
     expect(state.q[0]).toBeCloseTo(0.4, 3);
     expect(state.q[1]).toBeCloseTo(-0.4, 3);
+    expect(state.v[0]).toBeCloseTo(0, 3);
+  });
+
+  it("solves det(K − ω² M)=0 when the masses differ", () => {
+    const unequal = { m1: 2, m2: 0.5, kLeft: 1, kRight: 1, kCoupling: 1 };
+    const { slow, fast } = coupledEigenmodes(unequal);
+    expect(slow.omega).toBeCloseTo(Math.sqrt((5 - Math.sqrt(13)) / 2), 10);
+    expect(fast.omega).toBeCloseTo(Math.sqrt((5 + Math.sqrt(13)) / 2), 10);
+    expect((2 * Math.PI) / slow.omega).toBeCloseTo(7.52, 2);
+    expect((2 * Math.PI) / fast.omega).toBeCloseTo(3.03, 2);
+    expect(slow.omega).not.toBeCloseTo(Math.sqrt(1 / unequal.m1), 2);
+  });
+
+  it("locks to the slow eigenvector for unequal masses", () => {
+    const unequal = { m1: 2, m2: 0.5, kLeft: 1, kRight: 1, kCoupling: 1 };
+    const { slow } = coupledEigenmodes(unequal);
+    const sys = coupledSystem(unequal);
+    const state = new PhaseState(2);
+    coupledSymmetricMode(unequal, 0.4, state);
+    const ratio = slow.v[1] / slow.v[0];
+    const scratch = new Scratch();
+    const T = (2 * Math.PI) / slow.omega;
+    const dt = 0.001;
+    while (state.t < T) {
+      STEPPERS.rk4.step(sys, state, Math.min(dt, T - state.t), scratch);
+      expect(state.q[1] / state.q[0]).toBeCloseTo(ratio, 5);
+    }
+    expect(state.q[0]).toBeCloseTo(0.4 * slow.v[0], 3);
+    expect(state.v[0]).toBeCloseTo(0, 3);
+    expect(state.v[1]).toBeCloseTo(0, 3);
+  });
+
+  it("locks to the fast eigenvector for unequal masses", () => {
+    const unequal = { m1: 2, m2: 0.5, kLeft: 1, kRight: 1, kCoupling: 1 };
+    const { fast } = coupledEigenmodes(unequal);
+    const sys = coupledSystem(unequal);
+    const state = new PhaseState(2);
+    coupledAntisymmetricMode(unequal, 0.4, state);
+    const ratio = fast.v[1] / fast.v[0];
+    const scratch = new Scratch();
+    const T = (2 * Math.PI) / fast.omega;
+    const dt = 0.001;
+    while (state.t < T) {
+      STEPPERS.rk4.step(sys, state, Math.min(dt, T - state.t), scratch);
+      expect(state.q[1] / state.q[0]).toBeCloseTo(ratio, 5);
+    }
+    expect(state.q[0]).toBeCloseTo(0.4 * fast.v[0], 3);
     expect(state.v[0]).toBeCloseTo(0, 3);
   });
 
