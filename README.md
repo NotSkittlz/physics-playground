@@ -46,7 +46,7 @@ $\ddot\theta + \gamma\dot\theta + (g/L)\sin\theta = A\cos(\omega_d t)$. Closed l
 
 ![Two masses, three springs, beat](docs/screenshots/coupled.png)
 
-Wall–mass–mass–wall. Symmetric mode $\omega_-=\sqrt{k/m}$, antisymmetric $\omega_+=\sqrt{(k+2k_c)/m}$. Displace only $m_1$ and watch the beat.
+Wall–mass–mass–wall. For equal masses the modes are $\omega_-=\sqrt{k/m}$ and $\omega_+=\sqrt{(k+2k_c)/m}$. Unequal masses solve $\det(K-\omega^2 M)=0$ and seed from the eigenvectors. Displace only $m_1$ and watch the beat.
 
 ### 04 Double pendulum
 
@@ -62,7 +62,7 @@ Drag the charges. Equipotentials are marching squares on $V$; arrows sample $\ma
 
 ## Integrators
 
-Packed state $y=[q,v]$ as `Float64Array`. No allocations in the hot path; scratch buffers are reused.
+Packed state $y=[q,v]$ as `Float64Array`. Integrators reuse scratch buffers and do not allocate after `ensure(nq)`. Trail fade is eight `globalAlpha` buckets, not a string per segment.
 
 | id | Method | Order | Symplectic | Notes |
 | --- | --- | --- | --- | --- |
@@ -78,7 +78,7 @@ Tests in `src/integrators/step.test.ts` and `src/physics/analytic.test.ts` check
 - energy growth vs bounded error vs near-conservation
 - Kepler vis-viva and period $T=2\pi\sqrt{a^3/G(m_1+m_2)}$
 - small-angle pendulum $T=2\pi\sqrt{L/g}$
-- coupled-oscillator normal-mode frequencies
+- coupled-oscillator normal-mode frequencies, including unequal masses
 - double-pendulum energy and sensitive dependence
 - Coulomb superposition
 - a stiff spring and a high-eccentricity Kepler orbit
@@ -92,12 +92,11 @@ src/
   core/            Fixed-timestep loop, HiDPI canvas, plots, URL, KaTeX
   sims/            One module per simulation (draw + write-up + controls)
   ui/              Hash router, home, sim page, a11y chrome
-  physics.worker.ts  Optional off-thread stepper (bundled, idle by default)
 ```
 
-The render loop is `requestAnimationFrame`. Physics is **batched once per frame** at a fixed $\Delta t$, with an accumulator and a substep cap so a hitch cannot freeze the tab. Stepping pauses while the document is hidden. Canvases honour `devicePixelRatio` (capped at 2). Trails and plots are ring buffers. The optional worker is in the graph for catch-up bursts; the live loop stays on the main thread because trail/plot sampling wants the CPU that just took the step, and these systems are microseconds.
+The render loop is `requestAnimationFrame`. Physics is **batched once per frame** at a fixed $\Delta t$, with an accumulator and a substep cap so a hitch cannot freeze the tab. Stepping pauses while the document is hidden. Canvases honour `devicePixelRatio` (capped at 2). Trails and plots are ring buffers. The live loop stays on the main thread because trail/plot sampling wants the CPU that just took the step, and these systems are microseconds.
 
-Shareable state lives in the hash, so GitHub Pages does not need a server: `#/kepler?e=0.8&cmp=1&int=verlet`.
+Shareable state lives in the hash, so GitHub Pages does not need a server: `#/kepler?e=0.8&cmp=1&int=verlet`. Numbers are clamped to the same bounds as the sliders.
 
 ## How to add a simulation
 
@@ -123,16 +122,16 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, test, and build on every P
 
 ## Known limitations (v0.1)
 
-- Verlet with velocity-dependent forces (damped pendulum) is no longer symplectic; RK4/RK45 are the honest choice there.
+- Verlet with velocity-dependent forces (damped pendulum) is no longer symplectic; the pendulum defaults to RK4.
 - Explicit methods on a stiff spring or a grazing Coulomb singularity need a small $\Delta t$ or RK45. Softening on the field is a numerical courtesy, not physics.
 - Compare-integrators on Kepler disables the single-method dropdown on purpose.
-- The Poincaré section is sampled in real time; a dense attractor takes a while. Let it run.
+- The Poincaré section interpolates $(\\theta,\\omega)$ onto each drive period as the sim runs; a dense attractor still takes a while. Let it run.
 - Adaptive RK45 covering a fixed outer step can take many internal substeps on stiff problems — the perf readout will say so.
 - Hash state for dragged charges is lossy to three decimals.
 
 ## Roadmap
 
-- Poincaré burst (run $10^4$ drive periods off-thread, then draw)
+- Poincaré burst (run $10^4$ drive periods, then draw)
 - Rigid-body 3-D top, with quaternions
 - Restricted three-body and Lagrange points
 - Magnetic field / cyclotron, special-relativity option
