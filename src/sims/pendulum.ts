@@ -118,6 +118,7 @@ export class PendulumSim implements Simulation {
         title: "Phase portrait  (θ, ω)",
         xLabel: "θ",
         yLabel: "ω",
+        xWrap: Math.PI * 2,
       });
     }
   }

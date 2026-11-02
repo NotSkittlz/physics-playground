@@ -166,7 +166,7 @@ export function drawPlot(
       for (let k = 0; k < s.length; k++) {
         const j = (start + k) % s.cap;
         const xv = s.x[j];
-        if (opts.xWrap && k > 0 && xv + opts.xWrap * 0.5 < prevX) {
+        if (opts.xWrap && k > 0 && wrappedSegment(prevX, xv, opts.xWrap)) {
           moved = false;
         }
         prevX = xv;
@@ -192,6 +192,11 @@ export function drawPlot(
       ctx.fillText(s.label, lx, 8 + i * 14);
     }
   }
+}
+
+/** True when a periodic coordinate jumped across the branch cut. */
+export function wrappedSegment(prev: number, curr: number, wrap: number): boolean {
+  return Math.abs(curr - prev) > wrap * 0.5;
 }
 
 function formatTick(v: number): string {
