@@ -377,7 +377,7 @@ a:focus-visible {
 
 .sim-page {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto auto;
   min-height: calc(100dvh - var(--topbar-h));
 }
 
@@ -640,14 +640,15 @@ a:focus-visible {
 @media (min-width: 1280px) {
   .workspace {
     grid-template-columns: minmax(0, 1fr) var(--dock-width);
-    grid-template-rows: minmax(220px, 1fr) auto;
+    grid-template-rows: 200px auto;
     grid-template-areas:
       "world plot"
       "world dock";
     gap: var(--space-4);
-    height: calc(100dvh - var(--topbar-h) - 7.5rem);
-    min-height: 420px;
-    max-height: calc(100dvh - var(--topbar-h) - 6.5rem);
+    align-items: start;
+    height: auto;
+    max-height: none;
+    min-height: 0;
   }
   .viewport {
     height: auto;
@@ -655,21 +656,28 @@ a:focus-visible {
     align-self: stretch;
   }
   .plot-wrap {
-    height: auto;
-    min-height: 180px;
-    max-height: min(250px, 32%);
+    height: 200px;
+    min-height: 200px;
+    max-height: none;
   }
   .dock {
     background: transparent;
     border: 0;
     padding: 0;
     align-content: start;
-    overflow: auto;
+    overflow: visible;
     min-height: 0;
   }
   .dock-tools,
   .controls {
     grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+  .control.toggle {
+    min-height: 0;
+  }
+  .control.toggle label {
+    min-height: 28px;
   }
 }
 
@@ -678,7 +686,6 @@ a:focus-visible {
     max-width: 1680px;
     width: 100%;
     margin-inline: auto;
-    min-height: calc(100dvh - var(--topbar-h) - 140px);
   }
 }
 
