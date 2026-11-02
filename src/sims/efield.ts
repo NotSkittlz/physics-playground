@@ -1,5 +1,11 @@
 import { fillBackground, type Palette } from "../core/canvas.ts";
 import { drawArrow, drawDisc, screenToWorld, worldToScreen } from "../core/draw.ts";
+import {
+  FIELD_LODS,
+  initialFieldLodState,
+  nextFieldLod,
+  type FieldLodState,
+} from "../core/lod.ts";
 import { hypot2 } from "../core/math.ts";
 import { drawPlot, RingSeries } from "../core/plot.ts";
 import { Trail2D, withAlpha } from "../core/trail.ts";
@@ -13,11 +19,7 @@ import {
 import { Integrable } from "./common.ts";
 import { bool, num, str, type ParamValue, type SimFrame, type SimMeta, type Simulation } from "./types.ts";
 
-const NX = 140;
-const NY = 90;
-const ARROW_X = 19;
-const ARROW_Y = 13;
-const LEVELS = 11;
+const FINE = FIELD_LODS[0]!;
 
 const PRESETS: Record<string, PointCharge[]> = {
   dipole: [
@@ -53,13 +55,22 @@ export class EFieldSim implements Simulation {
   private body!: Integrable;
   private trail!: Trail2D;
   private energySeries!: RingSeries;
-  private V = new Float64Array(NX * NY);
-  private dirty = true;
+  private nx = FINE.nx;
+  private ny = FINE.ny;
+  private arrowX = FINE.arrowX;
+  private arrowY = FINE.arrowY;
+  private levels = FINE.levels;
+  private V = new Float64Array(FINE.nx * FINE.ny);
+  private lodState: FieldLodState = initialFieldLodState();
+  private fieldDirty = true;
   private showEq = true;
   private showField = true;
   private showWash = true;
   private image: ImageData | null = null;
   private off: HTMLCanvasElement | null = null;
+  private overlay: HTMLCanvasElement | null = null;
+  private overlayW = 0;
+  private overlayH = 0;
   private drag = -1;
   private world = { cx: 0, cy: 0, scale: 1, w: 1, h: 1 };
   private tmp = { ex: 0, ey: 0, v: 0 };
@@ -79,8 +90,8 @@ export class EFieldSim implements Simulation {
 
   apply(params: Record<string, ParamValue>, frame: SimFrame): void {
     this.applyView(params, frame);
-    if (this.energySeries) this.energySeries.color = this.pal.brass;
-    this.dirty = true;
+    if (this.energySeries)     this.energySeries.color = this.pal.brass;
+    this.fieldDirty = true;
   }
 
   private applyView(params: Record<string, ParamValue>, frame: SimFrame): void {
@@ -107,7 +118,7 @@ export class EFieldSim implements Simulation {
     this.trail = new Trail2D(this.reduced ? 40 : 280);
     this.energySeries = new RingSeries(700, this.pal.brass, "E");
     this.E0 = efieldParticleEnergy(this.live, this.body.curr.q, this.body.curr.v);
-    this.dirty = true;
+    this.fieldDirty = true;
     this.sample();
   }
 
@@ -115,14 +126,27 @@ export class EFieldSim implements Simulation {
     this.body.advance(steps, dt, () => this.sample());
   }
 
-  drawWorld(ctx: CanvasRenderingContext2D, w: number, h: number, alpha: number): void {
+  drawWorld(ctx: CanvasRenderingContext2D, w: number, h: number, alpha: number, frameMs = 0): void {
     fillBackground(ctx, this.pal, w, h);
     const scale = (0.42 * Math.min(w, h));
     const cx = w / 2;
     const cy = h / 2;
     this.world = { cx, cy, scale, w, h };
 
-    if (this.dirty) this.computeGrid();
+    const next = nextFieldLod(this.lodState, frameMs, Math.min(w, h), this.reduced);
+    if (next.lod !== this.lodState.lod) this.applyLod(next.lod);
+    this.lodState = next;
+    if (w !== this.overlayW || h !== this.overlayH) {
+      this.overlayW = w;
+      this.overlayH = h;
+      this.fieldDirty = true;
+    }
+
+    if (this.fieldDirty) {
+      this.computeGrid();
+      this.paintOverlay();
+      this.fieldDirty = false;
+    }
 
     if (this.showWash && this.off) {
       ctx.save();
@@ -132,8 +156,9 @@ export class EFieldSim implements Simulation {
       ctx.restore();
     }
 
-    if (this.showEq) this.drawEquipotentials(ctx, w, h);
-    if (this.showField) this.drawArrows(ctx);
+    if ((this.showEq || this.showField) && this.overlay) {
+      ctx.drawImage(this.overlay, 0, 0, w, h);
+    }
 
     this.body.interpolate(alpha);
     const q = this.body.draw.q;
@@ -199,7 +224,7 @@ export class EFieldSim implements Simulation {
     const c = this.charges[this.drag];
     c.x = Math.max(-1.8, Math.min(1.8, p.x));
     c.y = Math.max(-1.8, Math.min(1.8, p.y));
-    this.dirty = true;
+    this.fieldDirty = true;
   }
 
   pointerUp(): void {
@@ -239,32 +264,56 @@ export class EFieldSim implements Simulation {
     return -1;
   }
 
+  private applyLod(lod: number): void {
+    const spec = FIELD_LODS[lod] ?? FINE;
+    if (
+      spec.nx === this.nx &&
+      spec.ny === this.ny &&
+      spec.arrowX === this.arrowX &&
+      spec.arrowY === this.arrowY &&
+      spec.levels === this.levels
+    ) {
+      return;
+    }
+    this.nx = spec.nx;
+    this.ny = spec.ny;
+    this.arrowX = spec.arrowX;
+    this.arrowY = spec.arrowY;
+    this.levels = spec.levels;
+    this.V = new Float64Array(this.nx * this.ny);
+    this.off = null;
+    this.image = null;
+    this.fieldDirty = true;
+  }
+
   private computeGrid(): void {
     const { cx, cy, scale, w, h } = this.world;
+    const nx = this.nx;
+    const ny = this.ny;
     if (w < 2 || h < 2) return;
     let vmin = Infinity;
     let vmax = -Infinity;
-    for (let j = 0; j < NY; j++) {
-      for (let i = 0; i < NX; i++) {
-        const sx = (i / (NX - 1)) * w;
-        const sy = (j / (NY - 1)) * h;
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        const sx = (i / (nx - 1)) * w;
+        const sy = (j / (ny - 1)) * h;
         const p = screenToWorld(sx, sy, cx, cy, scale);
         fieldAt(p.x, p.y, this.charges, this.k, this.softening2, this.tmp);
         const v = this.tmp.v;
-        this.V[j * NX + i] = v;
+        this.V[j * nx + i] = v;
         if (v < vmin) vmin = v;
         if (v > vmax) vmax = v;
       }
     }
-    if (!this.off || this.off.width !== NX || this.off.height !== NY) {
+    if (!this.off || this.off.width !== nx || this.off.height !== ny) {
       this.off = document.createElement("canvas");
-      this.off.width = NX;
-      this.off.height = NY;
-      this.image = this.off.getContext("2d")!.createImageData(NX, NY);
+      this.off.width = nx;
+      this.off.height = ny;
+      this.image = this.off.getContext("2d")!.createImageData(nx, ny);
     }
     const img = this.image!;
     const span = Math.max(vmax - vmin, 1e-9);
-    for (let n = 0; n < NX * NY; n++) {
+    for (let n = 0; n < nx * ny; n++) {
       const t = (this.V[n] - vmin) / span;
       const [r, g, b] = wash(t, this.pal);
       const o = n * 4;
@@ -274,7 +323,20 @@ export class EFieldSim implements Simulation {
       img.data[o + 3] = 255;
     }
     this.off.getContext("2d")!.putImageData(img, 0, 0);
-    this.dirty = false;
+  }
+
+  private paintOverlay(): void {
+    const { w, h } = this.world;
+    if (w < 2 || h < 2) return;
+    if (!this.overlay || this.overlay.width !== w || this.overlay.height !== h) {
+      this.overlay = document.createElement("canvas");
+      this.overlay.width = w;
+      this.overlay.height = h;
+    }
+    const ctx = this.overlay.getContext("2d")!;
+    ctx.clearRect(0, 0, w, h);
+    if (this.showEq) this.drawEquipotentials(ctx, w, h);
+    if (this.showField) this.drawArrows(ctx);
   }
 
   private drawEquipotentials(ctx: CanvasRenderingContext2D, w: number, h: number): void {
@@ -288,19 +350,19 @@ export class EFieldSim implements Simulation {
     const span = vmax - vmin;
     if (span < 1e-12) return;
     ctx.lineWidth = 1;
-    for (const level of equipotentialLevels(vmin, vmax, LEVELS)) {
+    for (const level of equipotentialLevels(vmin, vmax, this.levels)) {
       ctx.strokeStyle = withAlpha(this.pal.ink, level === 0 ? 0.55 : 0.32);
       ctx.lineWidth = level === 0 ? 1.4 : 1;
-      march(ctx, this.V, NX, NY, w, h, level);
+      march(ctx, this.V, this.nx, this.ny, w, h, level);
     }
   }
 
   private drawArrows(ctx: CanvasRenderingContext2D): void {
     const { cx, cy, scale, w, h } = this.world;
-    for (let j = 0; j < ARROW_Y; j++) {
-      for (let i = 0; i < ARROW_X; i++) {
-        const sx = ((i + 0.5) / ARROW_X) * w;
-        const sy = ((j + 0.5) / ARROW_Y) * h;
+    for (let j = 0; j < this.arrowY; j++) {
+      for (let i = 0; i < this.arrowX; i++) {
+        const sx = ((i + 0.5) / this.arrowX) * w;
+        const sy = ((j + 0.5) / this.arrowY) * h;
         const p = screenToWorld(sx, sy, cx, cy, scale);
         if (tooClose(p.x, p.y, this.charges, 0.18)) continue;
         fieldAt(p.x, p.y, this.charges, this.k, this.softening2, this.tmp);

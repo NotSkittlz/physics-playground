@@ -59,7 +59,13 @@ export interface Simulation {
   reset(params: Record<string, ParamValue>, frame: SimFrame): void;
   apply(params: Record<string, ParamValue>, frame: SimFrame): void;
   advance(steps: number, dt: number): void;
-  drawWorld(ctx: CanvasRenderingContext2D, w: number, h: number, alpha: number): void;
+  drawWorld(
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    alpha: number,
+    frameMs?: number,
+  ): void;
   drawPlot(ctx: CanvasRenderingContext2D, w: number, h: number): void;
   plotCaption(): string;
   energy(): number;

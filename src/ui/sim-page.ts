@@ -135,7 +135,7 @@ export function mountSimPage(
       latestStats = stats;
       worldCanvas.resize();
       plotCanvas.resize();
-      sim.drawWorld(worldCanvas.ctx, worldCanvas.width, worldCanvas.height, alpha);
+      sim.drawWorld(worldCanvas.ctx, worldCanvas.width, worldCanvas.height, alpha, stats.frameMs);
       sim.drawPlot(plotCanvas.ctx, plotCanvas.width, plotCanvas.height);
       worldReadout.textContent = sim.readout();
       plotReadout.textContent = `${sim.plotCaption()}  ·  ${stats.fps.toFixed(0)} fps`;
