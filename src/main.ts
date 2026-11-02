@@ -1,8 +1,7 @@
-/**
- * Physics Playground — entry point.
- * The app shell is wired in later commits; this file keeps the scaffold buildable.
- */
+import "katex/dist/katex.min.css";
+import "./styles.css";
+import { startApp } from "./ui/app.ts";
+
 const root = document.getElementById("app");
-if (root) {
-  root.textContent = "Physics Playground";
-}
+if (!root) throw new Error("#app is missing");
+startApp(root);
