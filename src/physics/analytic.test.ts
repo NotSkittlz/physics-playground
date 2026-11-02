@@ -20,10 +20,12 @@ import { EFIELD_DEFAULTS, efieldParticleEnergy, efieldParticleSystem, fieldAt } 
 import {
   KEPLER_DEFAULTS,
   keplerAngularMomentum,
+  keplerApoapsisReach,
   keplerEnergy,
   keplerInitialState,
   keplerInnerSteps,
   keplerPeriod,
+  keplerRadiusAtTrueAnomaly,
   keplerSemiMajorFromEnergy,
   keplerSystem,
 } from "./kepler.ts";
@@ -99,6 +101,19 @@ describe("Kepler two-body analytics", () => {
     const cx = (m1 * state.q[0] + m2 * state.q[2]) / (m1 + m2);
     const cy = (m1 * state.q[1] + m2 * state.q[3]) / (m1 + m2);
     expect(Math.hypot(cx, cy)).toBeLessThan(1e-10);
+  });
+
+  it("fits the view to apoapsis of the farther mass", () => {
+    expect(keplerApoapsisReach({ ...KEPLER_DEFAULTS, e: 0.6, a: 1, m1: 1, m2: 1 })).toBeCloseTo(0.8, 12);
+    expect(keplerApoapsisReach({ ...KEPLER_DEFAULTS, e: 0.5, a: 1, m1: 3, m2: 1 })).toBeCloseTo(1.125, 12);
+    expect(keplerRadiusAtTrueAnomaly(ellipse, 0)).toBeCloseTo(ellipse.a * (1 - ellipse.e), 12);
+    expect(keplerRadiusAtTrueAnomaly(ellipse, Math.PI)).toBeCloseTo(ellipse.a * (1 + ellipse.e), 12);
+    const state = new PhaseState(4);
+    keplerInitialState(ellipse, state);
+    const r0 = Math.hypot(state.q[2] - state.q[0], state.q[3] - state.q[1]);
+    expect(r0).toBeCloseTo(keplerRadiusAtTrueAnomaly(ellipse, 0), 12);
+    const mtot = ellipse.m1 + ellipse.m2;
+    expect(state.q[2]).toBeCloseTo((ellipse.m1 / mtot) * r0, 12);
   });
 
   it("subdivides Δt only near periapsis of a high-e orbit", () => {

@@ -9,6 +9,8 @@ export {
   keplerEnergy,
   keplerAngularMomentum,
   keplerSemiMajorFromEnergy,
+  keplerApoapsisReach,
+  keplerRadiusAtTrueAnomaly,
   keplerInnerSteps,
 } from "./kepler.ts";
 export {

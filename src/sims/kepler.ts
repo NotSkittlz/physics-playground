@@ -1,16 +1,18 @@
 import { fillBackground, type Palette } from "../core/canvas.ts";
 import { drawDisc, worldToScreen } from "../core/draw.ts";
 import { drawPlot, RingSeries } from "../core/plot.ts";
-import { Trail2D } from "../core/trail.ts";
+import { Trail2D, withAlpha } from "../core/trail.ts";
 import { METHOD_LIST } from "../integrators/step.ts";
 import type { MethodId } from "../integrators/types.ts";
 import {
   KEPLER_DEFAULTS,
   keplerAngularMomentum,
+  keplerApoapsisReach,
   keplerEnergy,
   keplerInitialState,
   keplerInnerSteps,
   keplerPeriod,
+  keplerRadiusAtTrueAnomaly,
   keplerSystem,
   type KeplerParams,
 } from "../physics/kepler.ts";
@@ -129,10 +131,11 @@ export class KeplerSim implements Simulation {
     fillBackground(ctx, this.pal, w, h);
     const cx = w / 2;
     const cy = h / 2;
-    const span = this.params.a * (1 + this.params.e) * 2.5;
-    const scale = (0.46 * Math.min(w, h)) / Math.max(span, 0.4);
+    const reach = keplerApoapsisReach(this.params);
+    const scale = (0.4 * Math.min(w, h)) / Math.max(reach, 1e-6);
 
     drawDisc(ctx, cx, cy, 2.4, this.pal.muted);
+    this.strokeOrbitPreview(ctx, cx, cy, scale);
 
     for (let i = 0; i < this.bodies.length; i++) {
       this.bodies[i].interpolate(alpha);
@@ -219,6 +222,31 @@ export class KeplerSim implements Simulation {
       ],
       extra,
     };
+  }
+
+  /** Faint CM-frame ellipse of mass 2 so t ≈ 0 is not an empty frame. */
+  private strokeOrbitPreview(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number): void {
+    const p = this.params;
+    const mtot = p.m1 + p.m2;
+    if (!(mtot > 0)) return;
+    const s = p.m1 / mtot;
+    const n = 96;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, -scale);
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const nu = (i / n) * Math.PI * 2;
+      const r = s * keplerRadiusAtTrueAnomaly(p, nu);
+      const x = r * Math.cos(nu);
+      const y = r * Math.sin(nu);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = withAlpha(this.pal.muted, 0.35);
+    ctx.lineWidth = 1 / scale;
+    ctx.stroke();
+    ctx.restore();
   }
 
   private readoutIndex(): number {

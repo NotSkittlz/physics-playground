@@ -97,6 +97,21 @@ export function keplerSemiMajorFromEnergy(p: KeplerParams, energy: number): numb
   return -(p.G * p.m1 * p.m2) / (2 * energy);
 }
 
+/**
+ * Distance from the CM to the farther mass at apoapsis — the bounding
+ * radius of the two-body system in the CM frame.
+ */
+export function keplerApoapsisReach(p: KeplerParams): number {
+  const mtot = p.m1 + p.m2;
+  if (!(mtot > 0)) return p.a * (1 + p.e);
+  return (Math.max(p.m1, p.m2) / mtot) * p.a * (1 + p.e);
+}
+
+/** Relative separation at true anomaly ν, with periapsis at ν = 0. */
+export function keplerRadiusAtTrueAnomaly(p: KeplerParams, nu: number): number {
+  return (p.a * (1 - p.e * p.e)) / (1 + p.e * Math.cos(nu));
+}
+
 const INNER_STEPS_MAX = 24;
 /** Inner step ≲ local dynamical time / this, so periapsis stays resolved. */
 const INNER_TAU_DIVISOR = 16;
