@@ -107,6 +107,26 @@ export function keplerApoapsisReach(p: KeplerParams): number {
   return (Math.max(p.m1, p.m2) / mtot) * p.a * (1 + p.e);
 }
 
+/** Axis-aligned CM-frame box of both mass-1 and mass-2 ellipses. */
+export function keplerOrbitBox(p: KeplerParams): { cx: number; cy: number; hw: number; hh: number } {
+  const mtot = p.m1 + p.m2;
+  if (!(mtot > 0)) {
+    const reach = p.a * (1 + p.e);
+    return { cx: 0, cy: 0, hw: reach, hh: reach };
+  }
+  const rP = p.a * (1 - p.e);
+  const rA = p.a * (1 + p.e);
+  const x1p = (-p.m2 / mtot) * rP;
+  const x1a = (p.m2 / mtot) * rA;
+  const x2p = (p.m1 / mtot) * rP;
+  const x2a = (-p.m1 / mtot) * rA;
+  const xmin = Math.min(x1p, x1a, x2p, x2a);
+  const xmax = Math.max(x1p, x1a, x2p, x2a);
+  const bRel = p.a * Math.sqrt(Math.max(0, 1 - p.e * p.e));
+  const hh = Math.max((p.m1 / mtot) * bRel, (p.m2 / mtot) * bRel);
+  return { cx: (xmin + xmax) / 2, cy: 0, hw: (xmax - xmin) / 2, hh };
+}
+
 /** Relative separation at true anomaly ν, with periapsis at ν = 0. */
 export function keplerRadiusAtTrueAnomaly(p: KeplerParams, nu: number): number {
   return (p.a * (1 - p.e * p.e)) / (1 + p.e * Math.cos(nu));

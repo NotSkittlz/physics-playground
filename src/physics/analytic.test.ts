@@ -24,6 +24,7 @@ import {
   keplerEnergy,
   keplerInitialState,
   keplerInnerSteps,
+  keplerOrbitBox,
   keplerPeriod,
   keplerRadiusAtTrueAnomaly,
   keplerSemiMajorFromEnergy,
@@ -114,6 +115,12 @@ describe("Kepler two-body analytics", () => {
     expect(r0).toBeCloseTo(keplerRadiusAtTrueAnomaly(ellipse, 0), 12);
     const mtot = ellipse.m1 + ellipse.m2;
     expect(state.q[2]).toBeCloseTo((ellipse.m1 / mtot) * r0, 12);
+    const equal = keplerOrbitBox({ ...KEPLER_DEFAULTS, e: 0.6, a: 1, m1: 1, m2: 1 });
+    expect(equal.cx).toBeCloseTo(0, 12);
+    expect(equal.hw).toBeCloseTo(0.8, 12);
+    const heavy = keplerOrbitBox({ ...KEPLER_DEFAULTS, e: 0.5, a: 1, m1: 3, m2: 1 });
+    expect(heavy.cx).toBeCloseTo(-0.375, 12);
+    expect(heavy.hw).toBeCloseTo(0.75, 12);
   });
 
   it("subdivides Δt only near periapsis of a high-e orbit", () => {

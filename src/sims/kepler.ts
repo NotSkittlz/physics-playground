@@ -7,10 +7,10 @@ import type { MethodId } from "../integrators/types.ts";
 import {
   KEPLER_DEFAULTS,
   keplerAngularMomentum,
-  keplerApoapsisReach,
   keplerEnergy,
   keplerInitialState,
   keplerInnerSteps,
+  keplerOrbitBox,
   keplerPeriod,
   keplerRadiusAtTrueAnomaly,
   keplerSystem,
@@ -129,10 +129,11 @@ export class KeplerSim implements Simulation {
 
   drawWorld(ctx: CanvasRenderingContext2D, w: number, h: number, alpha: number): void {
     fillBackground(ctx, this.pal, w, h);
-    const cx = w / 2;
-    const cy = h / 2;
-    const reach = keplerApoapsisReach(this.params);
-    const scale = (0.4 * Math.min(w, h)) / Math.max(reach, 1e-6);
+    const box = keplerOrbitBox(this.params);
+    const span = Math.max(box.hw, box.hh, 1e-6);
+    const scale = (0.4 * Math.min(w, h)) / span;
+    const cx = w / 2 - box.cx * scale;
+    const cy = h / 2 + box.cy * scale;
 
     drawDisc(ctx, cx, cy, 2.4, this.pal.muted);
     this.strokeOrbitPreview(ctx, cx, cy, scale);
@@ -224,28 +225,31 @@ export class KeplerSim implements Simulation {
     };
   }
 
-  /** Faint CM-frame ellipse of mass 2 so t ≈ 0 is not an empty frame. */
+  /** Faint CM-frame ellipses of both masses so t ≈ 0 is not an empty frame. */
   private strokeOrbitPreview(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number): void {
     const p = this.params;
     const mtot = p.m1 + p.m2;
     if (!(mtot > 0)) return;
-    const s = p.m1 / mtot;
     const n = 96;
+    const stroke = (massScale: number, alpha: number): void => {
+      ctx.beginPath();
+      for (let i = 0; i <= n; i++) {
+        const nu = (i / n) * Math.PI * 2;
+        const r = massScale * keplerRadiusAtTrueAnomaly(p, nu);
+        const x = r * Math.cos(nu);
+        const y = r * Math.sin(nu);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = withAlpha(this.pal.muted, alpha);
+      ctx.lineWidth = 1 / scale;
+      ctx.stroke();
+    };
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(scale, -scale);
-    ctx.beginPath();
-    for (let i = 0; i <= n; i++) {
-      const nu = (i / n) * Math.PI * 2;
-      const r = s * keplerRadiusAtTrueAnomaly(p, nu);
-      const x = r * Math.cos(nu);
-      const y = r * Math.sin(nu);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = withAlpha(this.pal.muted, 0.35);
-    ctx.lineWidth = 1 / scale;
-    ctx.stroke();
+    stroke(p.m1 / mtot, 0.4);
+    stroke(-p.m2 / mtot, 0.32);
     ctx.restore();
   }
 
