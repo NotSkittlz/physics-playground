@@ -344,6 +344,8 @@ export class EFieldSim implements Simulation {
     }
     const ctx = this.overlay.getContext("2d")!;
     ctx.clearRect(0, 0, w, h);
+    ctx.setLineDash([]);
+    ctx.lineDashOffset = 0;
     if (this.showEq) this.drawEquipotentials(ctx, w, h);
     if (this.showField) this.drawArrows(ctx);
   }
@@ -367,12 +369,26 @@ export class EFieldSim implements Simulation {
       march(ctx, this.V, this.nx, this.ny, w, h, level);
     }
     if (levels.some((l) => l === 0)) {
-      ctx.setLineDash([5, 7]);
-      ctx.strokeStyle = withAlpha(this.pal.ink, 0.2);
+      const lines = contourPolylines(this.V, this.nx, this.ny, w, h, 0);
+      const inset = Math.min(w, h) * 0.08;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(inset, inset, w - 2 * inset, h - 2 * inset);
+      ctx.clip();
+      ctx.setLineDash([2, 12]);
+      ctx.strokeStyle = withAlpha(this.pal.ink, 0.1);
       ctx.lineWidth = 1;
-      march(ctx, this.V, this.nx, this.ny, w, h, 0);
-      ctx.setLineDash([]);
-      labelZeroContour(ctx, this.V, this.nx, this.ny, w, h, withAlpha(this.pal.ink, 0.5));
+      ctx.lineCap = "butt";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      for (const line of lines) {
+        if (line.length < 2) continue;
+        ctx.moveTo(line[0].x, line[0].y);
+        for (let i = 1; i < line.length; i++) ctx.lineTo(line[i].x, line[i].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+      labelZeroContour(ctx, this.V, this.nx, this.ny, w, h, withAlpha(this.pal.ink, 0.62), this.pal.bg);
     }
   }
 
@@ -449,15 +465,23 @@ function labelZeroContour(
   w: number,
   h: number,
   color: string,
+  bg: string,
 ): void {
   const p = zeroContourAnchor(V, nx, ny, w, h);
   if (!p) return;
-  ctx.fillStyle = color;
   ctx.font = "500 11px 'Source Sans 3', sans-serif";
   ctx.textAlign = p.x > w * 0.7 ? "right" : "left";
   ctx.textBaseline = "bottom";
-  const dx = p.x > w * 0.7 ? -6 : 6;
-  ctx.fillText("V = 0", p.x + dx, p.y - 4);
+  const dx = p.x > w * 0.7 ? -7 : 7;
+  const text = "V = 0";
+  const tw = ctx.measureText(text).width;
+  const x = p.x + dx;
+  const y = p.y - 4;
+  const left = ctx.textAlign === "right" ? x - tw - 3 : x - 3;
+  ctx.fillStyle = withAlpha(bg, 0.78);
+  ctx.fillRect(left, y - 12, tw + 6, 14);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
 }
 
 function tooClose(x: number, y: number, charges: PointCharge[], d: number): boolean {
@@ -499,6 +523,8 @@ function mix(a: [number, number, number], b: [number, number, number], t: number
   ];
 }
 
+type Pt = { x: number; y: number };
+
 function march(
   ctx: CanvasRenderingContext2D,
   V: Float64Array,
@@ -508,9 +534,28 @@ function march(
   h: number,
   level: number,
 ): void {
+  ctx.beginPath();
+  for (const [p, q] of marchSegments(V, nx, ny, w, h, level)) {
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(q.x, q.y);
+  }
+  ctx.stroke();
+}
+
+function marchSegments(
+  V: Float64Array,
+  nx: number,
+  ny: number,
+  w: number,
+  h: number,
+  level: number,
+): [Pt, Pt][] {
   const dx = w / (nx - 1);
   const dy = h / (ny - 1);
-  ctx.beginPath();
+  const segs: [Pt, Pt][] = [];
+  const pair = (p: Pt, q: Pt): void => {
+    segs.push([p, q]);
+  };
   for (let j = 0; j < ny - 1; j++) {
     for (let i = 0; i < nx - 1; i++) {
       const v00 = V[j * nx + i];
@@ -530,13 +575,6 @@ function march(
       const rgt = { x: x + dx, y: y + dy * lerpE(v10, v11) };
       const top = { x: x + dx * lerpE(v01, v11), y: y + dy };
       const lft = { x, y: y + dy * lerpE(v00, v01) };
-      const pair = (
-        p: { x: number; y: number },
-        q: { x: number; y: number },
-      ): void => {
-        ctx.moveTo(p.x, p.y);
-        ctx.lineTo(q.x, q.y);
-      };
       switch (code) {
         case 1:
         case 14:
@@ -575,7 +613,63 @@ function march(
       }
     }
   }
-  ctx.stroke();
+  return segs;
+}
+
+/**
+ * Stitch marching-squares edge segments into polylines so a canvas dash
+ * pattern can run along the contour instead of restarting on every cell.
+ */
+export function contourPolylines(
+  V: Float64Array,
+  nx: number,
+  ny: number,
+  w: number,
+  h: number,
+  level: number,
+): Pt[][] {
+  return stitchPolylines(marchSegments(V, nx, ny, w, h, level));
+}
+
+function stitchPolylines(segments: [Pt, Pt][]): Pt[][] {
+  const used = new Uint8Array(segments.length);
+  const eq = (a: Pt, b: Pt): boolean => Math.hypot(a.x - b.x, a.y - b.y) < 0.75;
+  const lines: Pt[][] = [];
+  for (let i = 0; i < segments.length; i++) {
+    if (used[i]) continue;
+    used[i] = 1;
+    const line: Pt[] = [segments[i][0], segments[i][1]];
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (let j = 0; j < segments.length; j++) {
+        if (used[j]) continue;
+        const a = segments[j][0];
+        const b = segments[j][1];
+        const head = line[0];
+        const tail = line[line.length - 1];
+        if (eq(tail, a)) {
+          line.push(b);
+          used[j] = 1;
+          grew = true;
+        } else if (eq(tail, b)) {
+          line.push(a);
+          used[j] = 1;
+          grew = true;
+        } else if (eq(head, a)) {
+          line.unshift(b);
+          used[j] = 1;
+          grew = true;
+        } else if (eq(head, b)) {
+          line.unshift(a);
+          used[j] = 1;
+          grew = true;
+        }
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
 }
 
 const META: SimMeta = {
