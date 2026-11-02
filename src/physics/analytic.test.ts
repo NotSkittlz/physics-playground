@@ -352,6 +352,15 @@ describe("electrostatics", () => {
     expect(out.ex).toBeCloseTo(-2, 8);
   });
 
+  it("keeps V huge and finite at a charge, not a vanishing force kernel", () => {
+    const out = { ex: 0, ey: 0, v: 0 };
+    fieldAt(0, 0, [{ x: 0, y: 0, q: 1 }], 1, 0, out);
+    expect(Number.isFinite(out.v)).toBe(true);
+    expect(Math.abs(out.v)).toBeGreaterThan(1e6);
+    expect(Number.isFinite(out.ex)).toBe(true);
+    expect(Number.isFinite(out.ey)).toBe(true);
+  });
+
   it("conserves test-particle energy in a static Coulomb field (RK4)", () => {
     const params = {
       ...EFIELD_DEFAULTS,

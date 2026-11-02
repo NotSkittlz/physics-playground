@@ -1,4 +1,4 @@
-import { hypot2, invR3 } from "../core/math.ts";
+import { hypot2, invR3, SOFT_FLOOR } from "../core/math.ts";
 import type { System } from "../integrators/types.ts";
 
 export interface PointCharge {
@@ -44,7 +44,7 @@ export function fieldAt(
     const dy = y - c.y;
     const r2 = hypot2(dx, dy);
     const ir3 = invR3(r2, softening2);
-    const ir = 1 / Math.sqrt(r2 + softening2);
+    const ir = 1 / Math.sqrt(Math.max(r2 + Math.max(softening2, 0), SOFT_FLOOR));
     const kq = k * c.q;
     ex += kq * dx * ir3;
     ey += kq * dy * ir3;

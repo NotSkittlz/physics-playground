@@ -31,13 +31,16 @@ export function hypot2(x: number, y: number): number {
   return x * x + y * y;
 }
 
+/** Floor on r²+ε² so coincidence is a huge force, not a vanishing one. */
+export const SOFT_FLOOR = 1e-18;
+
 /**
  * Inverse-cube factor `1 / r^3` with optional Plummer softening.
  * Softening keeps forces finite at coincidence without allocating.
+ * Exact r=0 with ε=0 used to return 0 (and V=∞); we clamp instead.
  */
 export function invR3(r2: number, softening2 = 0): number {
-  const s = r2 + softening2;
-  if (s <= 0) return 0;
+  const s = Math.max(r2 + Math.max(softening2, 0), SOFT_FLOOR);
   return s ** -1.5;
 }
 

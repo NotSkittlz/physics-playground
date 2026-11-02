@@ -24,6 +24,12 @@ describe("math helpers", () => {
     expect(Number.isFinite(invR3(0, 1e-8))).toBe(true);
   });
 
+  it("clamps r=0, ε=0 to a huge finite force instead of zero", () => {
+    const f = invR3(0, 0);
+    expect(f).toBeGreaterThan(1e8);
+    expect(Number.isFinite(f)).toBe(true);
+  });
+
   it("performs in-place saxpy / linear combinations", () => {
     const y = new Float64Array([1, 2]);
     const k = new Float64Array([3, 4]);
