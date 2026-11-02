@@ -70,21 +70,22 @@ describe("integrator convergence on the harmonic oscillator", () => {
 
   it("fixed-step Dormand–Prince is fifth order", () => {
     const sys = harmonicSystem(1);
-    const err = (dt: number) => {
+    const tEnd = 2 * Math.PI;
+    const err = (n: number) => {
+      const dt = tEnd / n;
       const state = new PhaseState(1);
       state.set([1], [0], 0);
       const scratch = new Scratch();
       scratch.ensure(1);
-      const n = Math.round((2 * Math.PI) / dt);
       for (let i = 0; i < n; i++) rk45FixedStep(sys, state, dt, scratch);
-      const exact = harmonicExact(state.t, 1, 0, 1);
+      const exact = harmonicExact(tEnd, 1, 0, 1);
       return Math.hypot(state.q[0] - exact.q, state.v[0] - exact.v);
     };
-    const e1 = err(0.2);
-    const e2 = err(0.1);
+    const e1 = err(20);
+    const e2 = err(40);
     const p = observedOrder(e1, e2);
-    expect(p).toBeGreaterThan(4.4);
-    expect(p).toBeLessThan(6.2);
+    expect(p).toBeGreaterThan(4.7);
+    expect(p).toBeLessThan(5.4);
   });
 
   it("adaptive RK45 meets a tight tolerance over one period", () => {
@@ -208,7 +209,27 @@ describe("velocity-dependent damping", () => {
 });
 
 describe("steppers do not allocate in the hot path", () => {
-  it("reuses scratch buffers across thousands of Verlet steps", () => {
+  function countFloat64Allocs(fn: () => void): number {
+    const Orig = globalThis.Float64Array;
+    let n = 0;
+    const Tracking = function (this: Float64Array, ...args: unknown[]) {
+      n += 1;
+      return Reflect.construct(Orig, args, Tracking);
+    } as unknown as Float64ArrayConstructor;
+    Tracking.of = Orig.of.bind(Orig);
+    Tracking.from = Orig.from.bind(Orig);
+    Object.defineProperty(Tracking, "BYTES_PER_ELEMENT", { value: Orig.BYTES_PER_ELEMENT });
+    Tracking.prototype = Orig.prototype;
+    globalThis.Float64Array = Tracking;
+    try {
+      fn();
+    } finally {
+      globalThis.Float64Array = Orig;
+    }
+    return n;
+  }
+
+  it("does not construct Float64Array during Verlet or RK4 steps", () => {
     const sys = harmonicSystem(1);
     const state = new PhaseState(1);
     state.set([1], [0], 0);
@@ -216,8 +237,12 @@ describe("steppers do not allocate in the hot path", () => {
     scratch.ensure(1);
     const y0 = scratch.ys[0];
     const a0 = scratch.as[0];
-    for (let i = 0; i < 5000; i++) velocityVerlet.step(sys, state, 0.01, scratch);
+    const extra = countFloat64Allocs(() => {
+      for (let i = 0; i < 2000; i++) velocityVerlet.step(sys, state, 0.01, scratch);
+      for (let i = 0; i < 500; i++) STEPPERS.rk4.step(sys, state, 0.01, scratch);
+    });
     expect(scratch.ys[0]).toBe(y0);
     expect(scratch.as[0]).toBe(a0);
+    expect(extra).toBe(0);
   });
 });
