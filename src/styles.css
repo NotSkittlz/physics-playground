@@ -241,6 +241,11 @@ a:focus-visible {
   place-items: center;
   color: var(--muted);
 }
+.icon-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
 .icon-btn:hover,
 .btn:hover {
   background: var(--bg-hover);
@@ -385,7 +390,7 @@ a:focus-visible {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
-    "crumb share"
+    "crumb crumb"
     "title share";
   gap: var(--space-1) var(--space-4);
   align-items: baseline;
@@ -412,7 +417,10 @@ a:focus-visible {
 }
 .sim-head [data-share] {
   grid-area: share;
-  align-self: start;
+  align-self: baseline;
+  height: auto;
+  padding-block: 0;
+  line-height: var(--leading-tight);
 }
 .crumb {
   font-family: var(--font-mono);
@@ -426,9 +434,9 @@ a:focus-visible {
 @media (min-width: 768px) {
   .sim-head {
     grid-template-areas:
-      "crumb share"
+      "crumb crumb"
       "title share"
-      "tag share";
+      "tag tag";
   }
   .sim-head .tag {
     display: block;

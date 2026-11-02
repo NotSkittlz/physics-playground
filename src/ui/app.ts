@@ -15,9 +15,24 @@ export function startApp(root: HTMLElement): void {
         <span class="brand-ver">v0.1</span>
       </a>
       <div class="top-actions">
-        <button type="button" class="icon-btn" data-perf title="Performance readout" aria-pressed="false" aria-label="Toggle performance readout">P</button>
-        <button type="button" class="icon-btn" data-theme title="Toggle theme" aria-label="Toggle dark and light theme">◐</button>
-        <button type="button" class="icon-btn" data-help title="Keyboard shortcuts" aria-label="Keyboard shortcuts">?</button>
+        <button type="button" class="icon-btn" data-perf title="Performance readout" aria-pressed="false" aria-label="Toggle performance readout">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+            <path d="M1.5 8h2.4l1.7-4.2 3.2 8.4L11 8h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" data-theme title="Toggle theme" aria-label="Toggle dark and light theme">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+            <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M8 2.75v10.5A5.25 5.25 0 0 0 8 2.75Z" fill="currentColor"/>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" data-help title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+            <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M6.35 6.2a1.7 1.7 0 1 1 2.15 2.22c-.5.3-.9.66-.9 1.28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="8" cy="11.6" r="0.85" fill="currentColor"/>
+          </svg>
+        </button>
       </div>
     </header>
     <main id="main"></main>
