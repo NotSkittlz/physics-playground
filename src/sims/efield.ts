@@ -64,6 +64,13 @@ export class EFieldSim implements Simulation {
   private world = { cx: 0, cy: 0, scale: 1, w: 1, h: 1 };
   private tmp = { ex: 0, ey: 0, v: 0 };
   private E0 = 0;
+  private live: {
+    k: number;
+    softening2: number;
+    testCharge: number;
+    testMass: number;
+    charges: PointCharge[];
+  } = { ...EFIELD_DEFAULTS, charges: [] };
 
   reset(params: Record<string, ParamValue>, frame: SimFrame): void {
     this.applyView(params, frame);
@@ -90,26 +97,21 @@ export class EFieldSim implements Simulation {
     const encoded = str(params, "c", "");
     const preset = str(params, "preset", "dipole");
     this.charges = encoded ? parseCharges(encoded) : PRESETS[preset]?.map((c) => ({ ...c })) ?? PRESETS.dipole.map((c) => ({ ...c }));
-    const spec = {
-      ...EFIELD_DEFAULTS,
-      k: this.k,
-      softening2: this.softening2,
-      testCharge: this.testQ,
-      testMass: this.testM,
-      charges: this.charges,
-    };
-    this.body = new Integrable(efieldParticleSystem(spec), frame.method);
+    this.live.k = this.k;
+    this.live.softening2 = this.softening2;
+    this.live.testCharge = this.testQ;
+    this.live.testMass = this.testM;
+    this.live.charges = this.charges;
+    this.body = new Integrable(efieldParticleSystem(this.live), frame.method);
     this.body.seed([0, 0.85], [0.35, 0], 0);
     this.trail = new Trail2D(this.reduced ? 40 : 280);
     this.energySeries = new RingSeries(700, this.pal.brass, "E");
-    this.E0 = efieldParticleEnergy(spec, this.body.curr.q, this.body.curr.v);
+    this.E0 = efieldParticleEnergy(this.live, this.body.curr.q, this.body.curr.v);
     this.dirty = true;
     this.sample();
   }
 
   advance(steps: number, dt: number): void {
-    const spec = this.spec();
-    this.body.sys = efieldParticleSystem(spec);
     this.body.advance(steps, dt, () => this.sample());
   }
 
@@ -213,14 +215,7 @@ export class EFieldSim implements Simulation {
   }
 
   private spec() {
-    return {
-      ...EFIELD_DEFAULTS,
-      k: this.k,
-      softening2: this.softening2,
-      testCharge: this.testQ,
-      testMass: this.testM,
-      charges: this.charges,
-    };
+    return this.live;
   }
 
   private sample(): void {

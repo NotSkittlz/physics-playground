@@ -61,11 +61,11 @@ export function fieldAt(
  */
 export function efieldParticleSystem(p: EFieldParams): System {
   const tmp = { ex: 0, ey: 0, v: 0 };
-  const qom = p.testCharge / p.testMass;
   return {
     nq: 2,
     accel(_t, q, _v, out) {
       fieldAt(q[0], q[1], p.charges, p.k, p.softening2, tmp);
+      const qom = p.testCharge / p.testMass;
       out[0] = qom * tmp.ex;
       out[1] = qom * tmp.ey;
     },

@@ -52,17 +52,33 @@ export class Trail2D {
       ctx.stroke();
       return;
     }
+    ctx.strokeStyle = color;
     ctx.lineWidth = width;
-    for (let k = 1; k < n; k++) {
-      const j0 = (start + k - 1) % this.cap;
-      const j1 = (start + k) % this.cap;
-      const a = k / n;
-      ctx.strokeStyle = withAlpha(color, a * a);
+    const prevAlpha = ctx.globalAlpha;
+    const buckets = 8;
+    for (let b = 0; b < buckets; b++) {
+      const lo = b / buckets;
+      const hi = (b + 1) / buckets;
+      ctx.globalAlpha = prevAlpha * hi * hi;
       ctx.beginPath();
-      ctx.moveTo(this.xs[j0], this.ys[j0]);
-      ctx.lineTo(this.xs[j1], this.ys[j1]);
+      let drawing = false;
+      for (let k = 1; k < n; k++) {
+        const u = k / n;
+        if (u < lo || u >= hi) {
+          drawing = false;
+          continue;
+        }
+        const j0 = (start + k - 1) % this.cap;
+        const j1 = (start + k) % this.cap;
+        if (!drawing) {
+          ctx.moveTo(this.xs[j0], this.ys[j0]);
+          drawing = true;
+        }
+        ctx.lineTo(this.xs[j1], this.ys[j1]);
+      }
       ctx.stroke();
     }
+    ctx.globalAlpha = prevAlpha;
   }
 }
 

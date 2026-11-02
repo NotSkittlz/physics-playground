@@ -132,7 +132,7 @@ export class KeplerSim implements Simulation {
       ctx.translate(cx, cy);
       ctx.scale(scale, -scale);
       ctx.lineCap = "round";
-      trail.stroke(ctx, color, this.compare ? 1.4 / scale : 2.2 / scale, !this.reduced);
+      trail.stroke(ctx, color, this.compare ? 1.4 / scale : 2.2 / scale, !this.reduced && !this.compare);
       ctx.restore();
 
       const p1 = worldToScreen(q[0], q[1], cx, cy, scale);
