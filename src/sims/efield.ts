@@ -2,7 +2,7 @@ import { fillBackground, type Palette } from "../core/canvas.ts";
 import { drawArrow, drawDisc, screenToWorld, worldToScreen } from "../core/draw.ts";
 import { hypot2 } from "../core/math.ts";
 import { drawPlot, RingSeries } from "../core/plot.ts";
-import { Trail2D } from "../core/trail.ts";
+import { Trail2D, withAlpha } from "../core/trail.ts";
 import {
   EFIELD_DEFAULTS,
   efieldParticleEnergy,
@@ -288,10 +288,9 @@ export class EFieldSim implements Simulation {
     const span = vmax - vmin;
     if (span < 1e-12) return;
     ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(236,231,220,0.35)";
     for (const level of equipotentialLevels(vmin, vmax, LEVELS)) {
-      if (level === 0) ctx.lineWidth = 1.4;
-      else ctx.lineWidth = 1;
+      ctx.strokeStyle = withAlpha(this.pal.ink, level === 0 ? 0.55 : 0.32);
+      ctx.lineWidth = level === 0 ? 1.4 : 1;
       march(ctx, this.V, NX, NY, w, h, level);
     }
   }
@@ -310,7 +309,7 @@ export class EFieldSim implements Simulation {
         const len = 10 * Math.log10(1 + mag);
         const ux = this.tmp.ex / mag;
         const uy = -this.tmp.ey / mag;
-        drawArrow(ctx, sx, sy, ux * len, uy * len, "rgba(126,179,217,0.75)", 1);
+        drawArrow(ctx, sx, sy, ux * len, uy * len, withAlpha(this.pal.sky, 0.75), 1);
       }
     }
   }
