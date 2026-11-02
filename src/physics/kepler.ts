@@ -78,7 +78,7 @@ export function keplerEnergy(p: KeplerParams, q: ArrayLike<number>, v: ArrayLike
   return k - (p.G * p.m1 * p.m2) / r;
 }
 
-/** Specific angular momentum of the relative orbit, L / μ. */
+/** Angular momentum of the relative orbit, L = μ (r × v). */
 export function keplerAngularMomentum(
   p: KeplerParams,
   q: ArrayLike<number>,
