@@ -212,15 +212,12 @@ describe("steppers do not allocate in the hot path", () => {
   function countFloat64Allocs(fn: () => void): number {
     const Orig = globalThis.Float64Array;
     let n = 0;
-    const Tracking = function (this: Float64Array, ...args: unknown[]) {
-      n += 1;
-      return Reflect.construct(Orig, args, Tracking);
-    } as unknown as Float64ArrayConstructor;
-    Tracking.of = Orig.of.bind(Orig);
-    Tracking.from = Orig.from.bind(Orig);
-    Object.defineProperty(Tracking, "BYTES_PER_ELEMENT", { value: Orig.BYTES_PER_ELEMENT });
-    Tracking.prototype = Orig.prototype;
-    globalThis.Float64Array = Tracking;
+    globalThis.Float64Array = new Proxy(Orig, {
+      construct(target, args) {
+        n += 1;
+        return Reflect.construct(target, args);
+      },
+    });
     try {
       fn();
     } finally {
