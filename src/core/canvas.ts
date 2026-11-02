@@ -56,16 +56,16 @@ export interface Palette {
 
 export function readPalette(): Palette {
   return {
-    bg: cssColor("--bg", "#0b0d11"),
-    elev: cssColor("--bg-elev", "#141821"),
-    ink: cssColor("--ink", "#ece7dc"),
-    muted: cssColor("--muted", "#9a9588"),
-    line: cssColor("--line", "rgba(212,160,86,0.25)"),
+    bg: cssColor("--bg", "#0c0d10"),
+    elev: cssColor("--bg-elev", "#14151b"),
+    ink: cssColor("--ink", "#ece8df"),
+    muted: cssColor("--muted", "#9b968c"),
+    line: cssColor("--line", "rgba(236,232,223,0.10)"),
     brass: cssColor("--brass", "#d4a056"),
-    sky: cssColor("--sky", "#7eb3d9"),
-    rose: cssColor("--rose", "#e08b7a"),
-    sage: cssColor("--sage", "#8fbf9a"),
-    paper: cssColor("--paper", "#ece7dc"),
+    sky: cssColor("--sky", "#7aa6c4"),
+    rose: cssColor("--rose", "#d9897a"),
+    sage: cssColor("--sage", "#7eae8c"),
+    paper: cssColor("--paper", "#ece8df"),
   };
 }
 
