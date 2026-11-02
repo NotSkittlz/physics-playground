@@ -358,11 +358,21 @@ export class EFieldSim implements Simulation {
     }
     const span = vmax - vmin;
     if (span < 1e-12) return;
+    const levels = equipotentialLevels(vmin, vmax, this.levels);
     ctx.lineWidth = 1;
-    for (const level of equipotentialLevels(vmin, vmax, this.levels)) {
-      ctx.strokeStyle = withAlpha(this.pal.ink, level === 0 ? 0.28 : 0.14);
-      ctx.lineWidth = level === 0 ? 1.1 : 1;
+    ctx.setLineDash([]);
+    for (const level of levels) {
+      if (level === 0) continue;
+      ctx.strokeStyle = withAlpha(this.pal.ink, 0.14);
       march(ctx, this.V, this.nx, this.ny, w, h, level);
+    }
+    if (levels.some((l) => l === 0)) {
+      ctx.setLineDash([5, 7]);
+      ctx.strokeStyle = withAlpha(this.pal.ink, 0.2);
+      ctx.lineWidth = 1;
+      march(ctx, this.V, this.nx, this.ny, w, h, 0);
+      ctx.setLineDash([]);
+      labelZeroContour(ctx, this.V, this.nx, this.ny, w, h, withAlpha(this.pal.ink, 0.5));
     }
   }
 
@@ -401,6 +411,53 @@ export function equipotentialLevels(vmin: number, vmax: number, count: number): 
     levels.sort((a, b) => a - b);
   }
   return levels;
+}
+
+/** Screen position of a V = 0 crossing, preferring the upper third of the canvas. */
+export function zeroContourAnchor(
+  V: Float64Array,
+  nx: number,
+  ny: number,
+  w: number,
+  h: number,
+): { x: number; y: number } | null {
+  const rows = [
+    Math.round(0.16 * (ny - 1)),
+    Math.round(0.28 * (ny - 1)),
+    Math.round(0.5 * (ny - 1)),
+    Math.round(0.82 * (ny - 1)),
+  ];
+  for (const j of rows) {
+    const jj = Math.max(0, Math.min(ny - 1, j));
+    for (let i = 0; i < nx - 1; i++) {
+      const a = V[jj * nx + i];
+      const b = V[jj * nx + i + 1];
+      if (a === 0 || a * b < 0) {
+        const t = a === 0 ? 0 : a / (a - b);
+        return { x: ((i + t) / (nx - 1)) * w, y: (jj / (ny - 1)) * h };
+      }
+    }
+  }
+  return null;
+}
+
+function labelZeroContour(
+  ctx: CanvasRenderingContext2D,
+  V: Float64Array,
+  nx: number,
+  ny: number,
+  w: number,
+  h: number,
+  color: string,
+): void {
+  const p = zeroContourAnchor(V, nx, ny, w, h);
+  if (!p) return;
+  ctx.fillStyle = color;
+  ctx.font = "500 11px 'Source Sans 3', sans-serif";
+  ctx.textAlign = p.x > w * 0.7 ? "right" : "left";
+  ctx.textBaseline = "bottom";
+  const dx = p.x > w * 0.7 ? -6 : 6;
+  ctx.fillText("V = 0", p.x + dx, p.y - 4);
 }
 
 function tooClose(x: number, y: number, charges: PointCharge[], d: number): boolean {
