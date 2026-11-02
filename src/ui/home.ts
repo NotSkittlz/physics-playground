@@ -29,20 +29,14 @@ export function renderHome(root: HTMLElement): void {
   `;
 
   const grid = root.querySelector("#cards") as HTMLElement;
-  const pal = readPalette();
-  const frame = {
-    palette: pal,
-    reducedMotion: reducedMotion(),
-    method: "verlet" as MethodId,
-    dt: 0.01,
-  };
+  const paints: Array<() => void> = [];
 
   for (const meta of SIM_METAS) {
     const a = document.createElement("a");
     a.className = "sim-card";
     a.href = `#/${meta.id}`;
     a.innerHTML = `
-      <canvas width="640" height="264" aria-hidden="true"></canvas>
+      <canvas aria-hidden="true"></canvas>
       <div class="body">
         <div class="num">${meta.number} / ${meta.kicker}</div>
         <h2>${meta.title}</h2>
@@ -52,13 +46,22 @@ export function renderHome(root: HTMLElement): void {
     grid.append(a);
     const canvas = a.querySelector("canvas")!;
     const view = new HiDpiCanvas(canvas);
-    view.resize();
-    const sim = createSim(meta.id);
-    if (!sim) continue;
-    sim.reset({ ...meta.defaults }, frame);
-    if (!reducedMotion()) {
-      sim.advance(40, 0.016);
-    }
-    sim.drawWorld(view.ctx, view.width, view.height, 1);
+    paints.push(() => {
+      view.resize();
+      const pal = readPalette();
+      const sim = createSim(meta.id);
+      if (!sim || view.width < 8) return;
+      sim.reset(
+        { ...meta.defaults },
+        { palette: pal, reducedMotion: reducedMotion(), method: "verlet" as MethodId, dt: 0.01 },
+      );
+      if (!reducedMotion()) sim.advance(48, 0.012);
+      sim.drawWorld(view.ctx, view.width, view.height, 1);
+    });
   }
+
+  const run = (): void => {
+    for (const paint of paints) paint();
+  };
+  requestAnimationFrame(() => requestAnimationFrame(run));
 }

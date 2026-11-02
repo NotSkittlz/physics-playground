@@ -37,6 +37,8 @@ export interface SimMeta {
   writeup: string;
   controls: Control[];
   defaults: Record<string, ParamValue>;
+  /** Suggested physics step; the app uses this unless the URL overrides. */
+  dt?: number;
 }
 
 export interface SimFrame {

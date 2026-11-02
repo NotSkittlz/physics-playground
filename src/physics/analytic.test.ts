@@ -238,6 +238,33 @@ describe("double pendulum", () => {
   });
 });
 
+describe("stiff and extreme cases", () => {
+  it("keeps Verlet finite and near-conservative at e = 0.9", () => {
+    const ellipse = { ...KEPLER_DEFAULTS, e: 0.9, a: 1, m1: 1, m2: 1, G: 1 };
+    const sys = keplerSystem(ellipse);
+    const state = new PhaseState(4);
+    keplerInitialState(ellipse, state);
+    const E0 = keplerEnergy(ellipse, state.q, state.v);
+    const scratch = new Scratch();
+    advance(STEPPERS.verlet, sys, state, keplerPeriod(ellipse) * 2, 0.001, scratch);
+    const E1 = keplerEnergy(ellipse, state.q, state.v);
+    expect(Number.isFinite(E1)).toBe(true);
+    expect(Math.abs(E1 - E0) / Math.abs(E0)).toBeLessThan(8e-3);
+  });
+
+  it("lets adaptive RK45 take a stiff coupled oscillator without NaNs", () => {
+    const p = { m1: 1, m2: 1, kLeft: 80, kRight: 80, kCoupling: 80 };
+    const sys = coupledSystem(p);
+    const state = new PhaseState(2);
+    state.set([0.2, 0], [0, 0], 0);
+    const scratch = new Scratch();
+    const r = advance(STEPPERS.rk45, sys, state, 2, 0.2, scratch, 1e-7);
+    expect(r.ok).toBe(true);
+    expect(Number.isFinite(state.q[0])).toBe(true);
+    expect(Number.isFinite(state.q[1])).toBe(true);
+  });
+});
+
 describe("electrostatics", () => {
   it("matches Coulomb's law for a single charge", () => {
     const charges = [{ x: 0, y: 0, q: 2 }];

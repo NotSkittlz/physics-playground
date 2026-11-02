@@ -106,14 +106,6 @@ export class KeplerSim implements Simulation {
     const span = this.params.a * (1 + this.params.e) * 2.5;
     const scale = (0.46 * Math.min(w, h)) / Math.max(span, 0.4);
 
-    ctx.save();
-    ctx.strokeStyle = this.pal.line;
-    ctx.setLineDash([2, 6]);
-    ctx.beginPath();
-    ctx.arc(cx, cy, this.params.a * scale, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
     drawDisc(ctx, cx, cy, 2.4, this.pal.muted);
 
     for (let i = 0; i < this.bodies.length; i++) {
@@ -198,6 +190,7 @@ const META: SimMeta = {
   title: "Kepler orbits",
   kicker: "Two-body gravity",
   tagline: "Ellipses, energy drift, and why symplectic integrators exist.",
+  dt: 0.008,
   defaults: { e: 0.6, m1: 1, m2: 1, a: 1, cmp: true },
   controls: [
     { key: "e", kind: "range", label: "Eccentricity", min: 0, max: 0.92, step: 0.01 },

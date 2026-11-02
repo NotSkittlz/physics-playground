@@ -26,7 +26,7 @@ export function mountSimPage(
 ): SimPageHandle {
   const params: Record<string, ParamValue> = { ...meta.defaults, ...castParams(urlParams, meta) };
   let method: MethodId = isMethodId(urlParams.int ?? "") ? (urlParams.int as MethodId) : "verlet";
-  let dt = coerceNumber(urlParams.dt, DEFAULT_DT);
+  let dt = coerceNumber(urlParams.dt, meta.dt ?? DEFAULT_DT);
   let speed = coerceNumber(urlParams.speed, DEFAULT_SPEED);
   let playing = coerceBool(urlParams.play, true);
   let latestStats: LoopStats | null = null;
@@ -159,6 +159,14 @@ export function mountSimPage(
     syncUrl();
   };
 
+  const intSelect = transport.querySelector("#int") as HTMLSelectElement;
+  const syncCompareUi = (): void => {
+    const cmp = params.cmp === true || params.cmp === "true" || params.cmp === "1";
+    intSelect.disabled = Boolean(cmp);
+    intSelect.title = cmp ? "Disabled while four integrators are compared side by side" : "";
+  };
+  syncCompareUi();
+
   playBtn.addEventListener("click", () => setPlaying(!playing));
   transport.querySelector("[data-reset]")!.addEventListener("click", () => {
     sim.reset(params, frameOf());
@@ -196,6 +204,7 @@ export function mountSimPage(
     } else params[key] = t.value;
     sim.reset(params, frameOf());
     loop.resetAccumulator();
+    syncCompareUi();
     syncUrl();
   });
 

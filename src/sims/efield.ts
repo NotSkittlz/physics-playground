@@ -429,6 +429,7 @@ const META: SimMeta = {
   title: "Electric field",
   kicker: "Electrostatics",
   tagline: "Point charges, equipotentials, and a test mass that believes in Coulomb.",
+  dt: 0.004,
   defaults: { preset: "dipole", tq: 0.4, soft: 0.05, eq: true, field: true, wash: true },
   controls: [
     {

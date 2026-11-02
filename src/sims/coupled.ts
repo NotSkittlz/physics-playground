@@ -138,6 +138,7 @@ const META: SimMeta = {
   title: "Coupled oscillators",
   kicker: "Normal modes",
   tagline: "Two masses, three springs, and the frequencies you can hear.",
+  dt: 0.008,
   defaults: { m1: 1, m2: 1, k: 1, kc: 1, mode: "beat" },
   controls: [
     { key: "k", kind: "range", label: "Wall spring k", min: 0.2, max: 4, step: 0.05 },

@@ -151,6 +151,7 @@ const META: SimMeta = {
   title: "Double pendulum",
   kicker: "Sensitive dependence",
   tagline: "Two twins, a hair of a difference, and exponential goodbye.",
+  dt: 0.002,
   defaults: { th1: 2, th2: 2, dth: 0.001, l1: 1, l2: 1, m1: 1, m2: 1, plot: "sep" },
   controls: [
     { key: "th1", kind: "range", label: "θ₁ (from down)", min: 0, max: 3.14, step: 0.01, unit: "rad" },
