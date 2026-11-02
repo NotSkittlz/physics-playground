@@ -22,6 +22,7 @@ import {
   type SimMeta,
   type Simulation,
   type ParamValue,
+  type Hud,
 } from "./types.ts";
 
 const COMPARE_IDS: MethodId[] = ["euler", "symplectic-euler", "verlet", "rk4"];
@@ -142,7 +143,9 @@ export class KeplerSim implements Simulation {
       ctx.translate(cx, cy);
       ctx.scale(scale, -scale);
       ctx.lineCap = "round";
-      trail.stroke(ctx, color, this.compare ? 1.4 / scale : 2.2 / scale, !this.reduced && !this.compare);
+      const focus = !this.compare || i === this.readoutIndex();
+      ctx.globalAlpha = this.compare ? (focus ? 0.7 : 0.32) : 1;
+      trail.stroke(ctx, color, (this.compare ? (focus ? 1.1 : 0.7) : 1.4) / scale, !this.reduced && !this.compare);
       ctx.restore();
 
       const p1 = worldToScreen(q[0], q[1], cx, cy, scale);
@@ -193,6 +196,29 @@ export class KeplerSim implements Simulation {
       parts.push(`ΔE/E = ${fmt(dE)}`, `ΔL/L = ${fmt(dL)}`);
     }
     return parts.join("  ·  ");
+  }
+
+  hud(): Hud {
+    const t = this.bodies[0]?.curr.t ?? 0;
+    const extra = [
+      { label: "t", value: t.toFixed(2) },
+      { label: "T", value: keplerPeriod(this.params).toFixed(2) },
+    ];
+    if (this.compare) {
+      const primary: Hud["primary"] = [];
+      const vi = this.ids.indexOf("verlet");
+      const ei = this.ids.indexOf("euler");
+      if (vi >= 0) primary.push({ label: "Verlet ΔE/E", value: fmt(this.relEnergy(vi)) });
+      if (ei >= 0) primary.push({ label: "Euler ΔE/E", value: fmt(this.relEnergy(ei)) });
+      return { primary, extra };
+    }
+    return {
+      primary: [
+        { label: "ΔE/E", value: fmt(this.relEnergy(0)) },
+        { label: "ΔL/L", value: fmt(this.relAngular(0)) },
+      ],
+      extra,
+    };
   }
 
   private readoutIndex(): number {

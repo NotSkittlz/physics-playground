@@ -57,7 +57,7 @@ export interface PlotOptions {
   xWrap?: number;
 }
 
-const PAD = { l: 46, r: 12, t: 28, b: 32 };
+const PAD = { l: 44, r: 12, t: 16, b: 26 };
 
 export function drawPlot(
   ctx: CanvasRenderingContext2D,
@@ -67,29 +67,21 @@ export function drawPlot(
   series: readonly RingSeries[],
   opts: PlotOptions,
 ): void {
-  ctx.fillStyle = pal.elev;
+  ctx.fillStyle = pal.bg;
   ctx.fillRect(0, 0, w, h);
 
-  ctx.strokeStyle = pal.line;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
-
-  const padT = series.length > 1 ? 40 : PAD.t;
-  ctx.fillStyle = pal.muted;
-  ctx.font = "600 12px 'Source Sans 3', sans-serif";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(opts.title, 12, 6);
-
+  const padT = series.length > 1 ? 28 : PAD.t;
   if (series.length > 1) {
-    ctx.font = "11px 'Source Sans 3', sans-serif";
+    ctx.font = "500 11px 'Source Sans 3', sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
     let lx = 12;
-    const ly = 22;
-    const gap = 10;
+    const ly = 8;
+    const gap = 12;
     for (const s of series) {
       const tw = ctx.measureText(s.label).width;
       if (lx + tw > w - 8) break;
-      ctx.fillStyle = s.color;
+      ctx.fillStyle = withAlpha(s.color, 0.9);
       ctx.fillText(s.label, lx, ly);
       lx += tw + gap;
     }
@@ -128,7 +120,7 @@ export function drawPlot(
   const xTo = (x: number) => PAD.l + ((x - xmin) / (xmax - xmin)) * innerW;
   const yTo = (y: number) => padT + ((ymax - y) / (ymax - ymin)) * innerH;
 
-  ctx.strokeStyle = withAlpha(pal.ink, 0.12);
+  ctx.strokeStyle = withAlpha(pal.ink, 0.08);
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(PAD.l, padT);
@@ -147,9 +139,9 @@ export function drawPlot(
   ctx.fillText(formatTick(xmin, xmax - xmin), PAD.l, padT + innerH + 6);
   ctx.fillText(formatTick(xmax, xmax - xmin), PAD.l + innerW, padT + innerH + 6);
 
-  ctx.fillStyle = pal.muted;
+  ctx.fillStyle = withAlpha(pal.muted, 0.85);
   ctx.font = "11px 'Source Sans 3', sans-serif";
-  ctx.fillText(opts.xLabel, PAD.l + innerW / 2, h - 14);
+  ctx.fillText(opts.xLabel, PAD.l + innerW / 2, h - 12);
   ctx.save();
   ctx.translate(12, padT + innerH / 2);
   ctx.rotate(-Math.PI / 2);
@@ -170,7 +162,7 @@ export function drawPlot(
       }
     } else {
       ctx.strokeStyle = s.color;
-      ctx.lineWidth = 1.4;
+      ctx.lineWidth = 1.15;
       ctx.beginPath();
       let moved = false;
       let prevX = s.x[start];

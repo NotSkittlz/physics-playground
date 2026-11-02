@@ -17,7 +17,7 @@ import {
   type PointCharge,
 } from "../physics/efield.ts";
 import { Integrable } from "./common.ts";
-import { bool, num, str, type ParamValue, type SimFrame, type SimMeta, type Simulation } from "./types.ts";
+import { bool, num, str, type Hud, type ParamValue, type SimFrame, type SimMeta, type Simulation } from "./types.ts";
 
 const FINE = FIELD_LODS[0]!;
 
@@ -150,7 +150,7 @@ export class EFieldSim implements Simulation {
 
     if (this.showWash && this.off) {
       ctx.save();
-      ctx.globalAlpha = 0.55;
+      ctx.globalAlpha = 0.42;
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(this.off, 0, 0, w, h);
       ctx.restore();
@@ -166,7 +166,7 @@ export class EFieldSim implements Simulation {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(scale, -scale);
-    this.trail.stroke(ctx, this.pal.sage, 1.6 / scale, !this.reduced);
+    this.trail.stroke(ctx, this.pal.sage, 1.2 / scale, !this.reduced);
     ctx.restore();
     drawDisc(ctx, p.x, p.y, 6, this.pal.sage, this.pal.ink);
 
@@ -176,17 +176,11 @@ export class EFieldSim implements Simulation {
       const r = 10 + 4 * Math.min(2, Math.abs(c.q));
       drawDisc(ctx, s.x, s.y, r, color, this.pal.paper);
       ctx.fillStyle = this.pal.bg;
-      ctx.font = "700 14px 'Source Sans 3', sans-serif";
+      ctx.font = "600 13px 'Source Sans 3', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(c.q >= 0 ? "+" : "−", s.x, s.y + 0.5);
     }
-
-    ctx.fillStyle = this.pal.muted;
-    ctx.font = "12px 'Source Sans 3', sans-serif";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText("Drag charges  ·  test mass in sage", 14, 12);
   }
 
   drawPlot(ctx: CanvasRenderingContext2D, w: number, h: number): void {
@@ -209,6 +203,21 @@ export class EFieldSim implements Simulation {
     const E = this.energy();
     const dE = this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0;
     return `t = ${this.body.curr.t.toFixed(2)}  ·  E = ${E.toFixed(3)}  ·  ΔE/E = ${dE.toExponential(1)}  ·  N = ${this.charges.length}`;
+  }
+
+  hud(): Hud {
+    const E = this.energy();
+    const dE = this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0;
+    return {
+      primary: [
+        { label: "ΔE/E", value: dE.toExponential(1) },
+        { label: "t", value: this.body.curr.t.toFixed(2) },
+      ],
+      extra: [
+        { label: "E", value: E.toFixed(3) },
+        { label: "N", value: String(this.charges.length) },
+      ],
+    };
   }
 
   pointerDown(sx: number, sy: number, w: number, h: number): boolean {
@@ -351,8 +360,8 @@ export class EFieldSim implements Simulation {
     if (span < 1e-12) return;
     ctx.lineWidth = 1;
     for (const level of equipotentialLevels(vmin, vmax, this.levels)) {
-      ctx.strokeStyle = withAlpha(this.pal.ink, level === 0 ? 0.55 : 0.32);
-      ctx.lineWidth = level === 0 ? 1.4 : 1;
+      ctx.strokeStyle = withAlpha(this.pal.ink, level === 0 ? 0.28 : 0.14);
+      ctx.lineWidth = level === 0 ? 1.1 : 1;
       march(ctx, this.V, this.nx, this.ny, w, h, level);
     }
   }
@@ -368,10 +377,10 @@ export class EFieldSim implements Simulation {
         fieldAt(p.x, p.y, this.charges, this.k, this.softening2, this.tmp);
         const mag = Math.hypot(this.tmp.ex, this.tmp.ey);
         if (mag < 1e-8) continue;
-        const len = 10 * Math.log10(1 + mag);
+        const len = 7 * Math.log10(1 + mag);
         const ux = this.tmp.ex / mag;
         const uy = -this.tmp.ey / mag;
-        drawArrow(ctx, sx, sy, ux * len, uy * len, withAlpha(this.pal.sky, 0.75), 1);
+        drawArrow(ctx, sx, sy, ux * len, uy * len, withAlpha(this.pal.sky, 0.32), 1);
       }
     }
   }
@@ -412,10 +421,10 @@ function parseCharges(raw: string): PointCharge[] {
 function wash(t: number, pal: Palette): [number, number, number] {
   const u = Math.max(0, Math.min(1, t));
   const rose = hex(pal.rose);
-  const paper = hex(pal.paper);
+  const mid = hex(pal.bg);
   const sky = hex(pal.sky);
-  if (u < 0.5) return mix(sky, paper, u * 2);
-  return mix(paper, rose, (u - 0.5) * 2);
+  if (u < 0.5) return mix(sky, mid, u * 2);
+  return mix(mid, rose, (u - 0.5) * 2);
 }
 
 function hex(c: string): [number, number, number] {

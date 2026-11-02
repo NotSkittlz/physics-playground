@@ -11,7 +11,7 @@ import {
   type CoupledParams,
 } from "../physics/coupled.ts";
 import { Integrable } from "./common.ts";
-import { num, str, type ParamValue, type SimFrame, type SimMeta, type Simulation } from "./types.ts";
+import { num, str, type Hud, type ParamValue, type SimFrame, type SimMeta, type Simulation } from "./types.ts";
 
 export class CoupledSim implements Simulation {
   readonly meta: SimMeta = META;
@@ -75,7 +75,7 @@ export class CoupledSim implements Simulation {
     const x2 = rest2 + q[1] * scale;
 
     ctx.strokeStyle = this.pal.line;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(wallL, y - 28);
     ctx.lineTo(wallL, y + 28);
@@ -96,17 +96,12 @@ export class CoupledSim implements Simulation {
     drawSpring(ctx, x2 + 16, y, wallR, y, 8, 7, this.pal.muted, 1.4);
     drawDisc(ctx, x1, y, 16, this.pal.paper, this.pal.brass);
     drawDisc(ctx, x2, y, 16, this.pal.paper, this.pal.sky);
-    ctx.fillStyle = this.pal.ink;
-    ctx.font = "600 12px 'Source Sans 3', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("m₁", x1, y + 4);
-    ctx.fillText("m₂", x2, y + 4);
-
-    const { slow, fast } = coupledNormalFrequencies(this.p);
     ctx.fillStyle = this.pal.muted;
-    ctx.font = "12px 'IBM Plex Mono', monospace";
-    ctx.textAlign = "left";
-    ctx.fillText(`ω₋ = ${slow.toFixed(3)}   ω₊ = ${fast.toFixed(3)}`, 16, 28);
+    ctx.font = "500 11px 'Source Sans 3', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("m₁", x1, y);
+    ctx.fillText("m₂", x2, y);
   }
 
   drawPlot(ctx: CanvasRenderingContext2D, w: number, h: number): void {
@@ -131,6 +126,23 @@ export class CoupledSim implements Simulation {
     const dE = this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0;
     const { slow, fast } = coupledNormalFrequencies(this.p);
     return `t = ${s.t.toFixed(2)}  ·  ΔE/E = ${dE.toExponential(1)}  ·  T₋ = ${(2 * Math.PI / slow).toFixed(2)}  ·  T₊ = ${(2 * Math.PI / fast).toFixed(2)}`;
+  }
+
+  hud(): Hud {
+    const s = this.body.curr;
+    const E = this.energy();
+    const dE = this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0;
+    const { slow, fast } = coupledNormalFrequencies(this.p);
+    return {
+      primary: [
+        { label: "T₋", value: ((2 * Math.PI) / slow).toFixed(2) },
+        { label: "T₊", value: ((2 * Math.PI) / fast).toFixed(2) },
+      ],
+      extra: [
+        { label: "t", value: s.t.toFixed(2) },
+        { label: "ΔE/E", value: dE.toExponential(1) },
+      ],
+    };
   }
 
   private sample(): void {

@@ -10,7 +10,7 @@ import {
   type DoublePendulumParams,
 } from "../physics/double-pendulum.ts";
 import { Integrable } from "./common.ts";
-import { num, type ParamValue, type SimFrame, type SimMeta, type Simulation } from "./types.ts";
+import { num, type Hud, type ParamValue, type SimFrame, type SimMeta, type Simulation } from "./types.ts";
 
 export class DoublePendulumSim implements Simulation {
   readonly meta: SimMeta = META;
@@ -121,6 +121,20 @@ export class DoublePendulumSim implements Simulation {
     return `t = ${s.t.toFixed(2)}  ·  |Δθ| = ${d.toFixed(3)}  ·  ΔE/E = ${dE.toExponential(1)}`;
   }
 
+  hud(): Hud {
+    const s = this.a.curr;
+    const d = Math.hypot(s.q[0] - this.b.curr.q[0], s.q[1] - this.b.curr.q[1]);
+    const E = this.energy();
+    const dE = this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0;
+    return {
+      primary: [
+        { label: "|Δθ|", value: d.toFixed(3) },
+        { label: "ΔE/E", value: dE.toExponential(1) },
+      ],
+      extra: [{ label: "t", value: s.t.toFixed(2) }],
+    };
+  }
+
   private drawOne(
     ctx: CanvasRenderingContext2D,
     body: Integrable,
@@ -139,7 +153,7 @@ export class DoublePendulumSim implements Simulation {
     const x2 = px + c.x2 * scale;
     const y2 = py - c.y2 * scale;
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 1.6;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(px, py);
@@ -151,7 +165,7 @@ export class DoublePendulumSim implements Simulation {
     ctx.save();
     ctx.translate(px, py);
     ctx.scale(scale, -scale);
-    trail.stroke(ctx, color, 1.3 / scale, !this.reduced);
+    trail.stroke(ctx, color, 0.9 / scale, !this.reduced);
     ctx.restore();
   }
 

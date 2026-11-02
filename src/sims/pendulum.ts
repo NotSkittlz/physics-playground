@@ -11,7 +11,7 @@ import {
   type PendulumParams,
 } from "../physics/pendulum.ts";
 import { Integrable } from "./common.ts";
-import { bool, num, type ParamValue, type SimFrame, type SimMeta, type Simulation } from "./types.ts";
+import { bool, num, type Hud, type ParamValue, type SimFrame, type SimMeta, type Simulation } from "./types.ts";
 
 export class PendulumSim implements Simulation {
   readonly meta: SimMeta = META;
@@ -101,7 +101,7 @@ export class PendulumSim implements Simulation {
     }
 
     ctx.strokeStyle = this.pal.muted;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(px, py);
@@ -112,7 +112,7 @@ export class PendulumSim implements Simulation {
     ctx.save();
     ctx.translate(px, py);
     ctx.scale(scale, scale);
-    this.trail.stroke(ctx, this.pal.sky, 1.5 / scale, !this.reduced);
+    this.trail.stroke(ctx, this.pal.sky, 1.15 / scale, !this.reduced);
     ctx.restore();
   }
 
@@ -157,6 +157,23 @@ export class PendulumSim implements Simulation {
     const E = this.energy();
     const dE = this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0;
     return `t = ${s.t.toFixed(2)}  ·  θ = ${s.q[0].toFixed(2)}  ·  ω = ${s.v[0].toFixed(2)}  ·  E = ${E.toFixed(3)}  ·  ΔE/E = ${dE.toExponential(1)}`;
+  }
+
+  hud(): Hud {
+    const s = this.body.curr;
+    const E = this.energy();
+    const dE = this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0;
+    return {
+      primary: [
+        { label: "θ", value: s.q[0].toFixed(2) },
+        { label: "ω", value: s.v[0].toFixed(2) },
+        { label: "ΔE/E", value: dE.toExponential(1) },
+      ],
+      extra: [
+        { label: "t", value: s.t.toFixed(2) },
+        { label: "E", value: E.toFixed(3) },
+      ],
+    };
   }
 
   private sample(th: number, om: number, t: number): void {
