@@ -168,6 +168,45 @@ describe("adaptive RK45 on stiff vs non-stiff oscillators", () => {
   });
 });
 
+describe("velocity-dependent damping", () => {
+  const gamma = 0.3;
+  const damped: System = {
+    nq: 1,
+    accel(_t, q, v, out) {
+      out[0] = -q[0] - gamma * v[0];
+    },
+  };
+
+  function exact(t: number): { q: number; v: number } {
+    const g = gamma / 2;
+    const w = Math.sqrt(1 - g * g);
+    const A = 1;
+    const B = g / w;
+    const e = Math.exp(-g * t);
+    const q = e * (A * Math.cos(w * t) + B * Math.sin(w * t));
+    const v = -g * q + e * (-A * w * Math.sin(w * t) + B * w * Math.cos(w * t));
+    return { q, v };
+  }
+
+  function err(stepper: Stepper, dt: number, tEnd = 1.7): number {
+    const state = integrate(stepper, damped, [1], [0], tEnd, dt);
+    const e = exact(state.t);
+    return Math.hypot(state.q[0] - e.q, state.v[0] - e.v);
+  }
+
+  it("drops Verlet to first order when a depends on v", () => {
+    const p = observedOrder(err(STEPPERS.verlet, 0.05), err(STEPPERS.verlet, 0.025));
+    expect(p).toBeGreaterThan(0.7);
+    expect(p).toBeLessThan(1.4);
+  });
+
+  it("keeps RK4 fourth order with linear damping", () => {
+    const p = observedOrder(err(STEPPERS.rk4, 0.1), err(STEPPERS.rk4, 0.05));
+    expect(p).toBeGreaterThan(3.5);
+    expect(p).toBeLessThan(4.6);
+  });
+});
+
 describe("steppers do not allocate in the hot path", () => {
   it("reuses scratch buffers across thousands of Verlet steps", () => {
     const sys = harmonicSystem(1);

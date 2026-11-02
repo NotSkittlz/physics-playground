@@ -39,6 +39,8 @@ export interface SimMeta {
   defaults: Record<string, ParamValue>;
   /** Suggested physics step; the app uses this unless the URL overrides. */
   dt?: number;
+  /** Default integrator when the hash has no `int`. */
+  method?: MethodId;
 }
 
 export interface SimFrame {

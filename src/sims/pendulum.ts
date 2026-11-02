@@ -163,6 +163,7 @@ const META: SimMeta = {
   kicker: "Phase space & chaos",
   tagline: "Limit cycles, strange attractors, and a Poincaré section.",
   dt: 0.01,
+  method: "rk4",
   defaults: { L: 1, gamma: 0.15, A: 0, w: 0.6667, th0: 1.2, linear: false, plot: "phase" },
   controls: [
     { key: "th0", kind: "range", label: "Initial angle", min: 0, max: 3.14, step: 0.01, unit: "rad" },

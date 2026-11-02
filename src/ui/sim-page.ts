@@ -25,7 +25,9 @@ export function mountSimPage(
   urlParams: Record<string, string>,
 ): SimPageHandle {
   const params: Record<string, ParamValue> = { ...meta.defaults, ...castParams(urlParams, meta) };
-  let method: MethodId = isMethodId(urlParams.int ?? "") ? (urlParams.int as MethodId) : "verlet";
+  let method: MethodId = isMethodId(urlParams.int ?? "")
+    ? (urlParams.int as MethodId)
+    : (meta.method ?? "verlet");
   let dt = coerceNumber(urlParams.dt, meta.dt ?? DEFAULT_DT);
   let speed = coerceNumber(urlParams.speed, DEFAULT_SPEED);
   let playing = coerceBool(urlParams.play, true);
