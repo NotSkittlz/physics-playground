@@ -70,7 +70,7 @@ export function mountSimPage(
   const controlsEl = root.querySelector("#controls") as HTMLElement;
 
   transport.innerHTML = `
-    <button type="button" class="btn primary" data-play aria-pressed="${playing}">Pause</button>
+    <button type="button" class="btn primary" data-play aria-pressed="${playing}">${playing ? "Pause" : "Play"}</button>
     <button type="button" class="btn" data-reset>Reset</button>
     <div class="control" style="min-width:180px">
       <label for="int">Integrator</label>

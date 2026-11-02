@@ -184,6 +184,9 @@ a:focus-visible {
   border-color: var(--brass);
   color: var(--brass);
 }
+.btn.primary[aria-pressed="true"] {
+  color: var(--bg);
+}
 
 .home {
   max-width: 1120px;
