@@ -146,18 +146,45 @@ export class KeplerSim implements Simulation {
   }
 
   energy(): number {
-    const s = this.bodies[0].curr;
+    const s = this.bodies[this.readoutIndex()].curr;
     return keplerEnergy(this.params, s.q, s.v);
   }
 
   readout(): string {
-    const s = this.bodies[0].curr;
-    const E = keplerEnergy(this.params, s.q, s.v);
-    const L = keplerAngularMomentum(this.params, s.q, s.v);
     const T = keplerPeriod(this.params);
-    const dE = this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0;
-    const dL = this.L0 !== 0 ? (L - this.L0) / Math.abs(this.L0) : 0;
-    return `t = ${s.t.toFixed(2)}  ·  T = ${T.toFixed(2)}  ·  ΔE/E = ${fmt(dE)}  ·  ΔL/L = ${fmt(dL)}`;
+    const t = this.bodies[0]?.curr.t ?? 0;
+    const parts = [`t = ${t.toFixed(2)}`, `T = ${T.toFixed(2)}`];
+    if (this.compare) {
+      for (const id of ["verlet", "euler"] as const) {
+        const i = this.ids.indexOf(id);
+        if (i < 0) continue;
+        const dE = this.relEnergy(i);
+        const name = id === "verlet" ? "Verlet" : "Euler";
+        parts.push(`${name} ΔE/E = ${fmt(dE)}`);
+      }
+    } else {
+      const dE = this.relEnergy(0);
+      const dL = this.relAngular(0);
+      parts.push(`ΔE/E = ${fmt(dE)}`, `ΔL/L = ${fmt(dL)}`);
+    }
+    return parts.join("  ·  ");
+  }
+
+  private readoutIndex(): number {
+    const i = this.ids.indexOf("verlet");
+    return i >= 0 ? i : 0;
+  }
+
+  private relEnergy(i: number): number {
+    const s = this.bodies[i].curr;
+    const E = keplerEnergy(this.params, s.q, s.v);
+    return this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0;
+  }
+
+  private relAngular(i: number): number {
+    const s = this.bodies[i].curr;
+    const L = keplerAngularMomentum(this.params, s.q, s.v);
+    return this.L0 !== 0 ? (L - this.L0) / Math.abs(this.L0) : 0;
   }
 
   private pushTrails(): void {
