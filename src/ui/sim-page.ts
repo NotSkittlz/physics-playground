@@ -7,7 +7,7 @@ import { reducedMotion } from "../core/theme.ts";
 import { METHOD_LIST } from "../integrators/step.ts";
 import { isMethodId, type MethodId } from "../integrators/types.ts";
 import { createSim } from "../sims/registry.ts";
-import type { ParamValue, SimMeta, Simulation } from "../sims/types.ts";
+import type { HudItem, ParamValue, SimMeta, Simulation } from "../sims/types.ts";
 
 export interface SimPageHandle {
   destroy(): void;
@@ -39,25 +39,52 @@ export function mountSimPage(
   root.innerHTML = `
     <article class="sim-page">
       <header class="sim-head">
-        <div>
-          <a class="crumb" href="#/">← Playground</a>
-          <h1>${meta.title}</h1>
-          <p class="tag">${meta.tagline}</p>
-        </div>
-        <button type="button" class="btn" data-share>Copy link</button>
+        <a class="crumb" href="#/">Playground</a>
+        <h1>${meta.title}</h1>
+        <p class="tag">${meta.tagline}</p>
+        <button type="button" class="btn ghost" data-share>Copy link</button>
       </header>
-      <div class="transport" id="transport"></div>
-      <div class="stage">
+      <div class="workspace">
         <div class="viewport">
           <canvas id="world" aria-label="${meta.title} animation"></canvas>
-          <div class="readout" id="world-readout" aria-hidden="true"></div>
+          <div class="hud">
+            <dl class="hud-row" data-hud-primary></dl>
+            <button type="button" class="hud-more" data-hud-toggle aria-expanded="false" hidden>Details</button>
+            <dl class="hud-row" data-hud-extra hidden></dl>
+          </div>
+          <div class="sr-only" id="world-readout"></div>
         </div>
         <div class="plot-wrap">
           <canvas id="plot" aria-label="Live plot"></canvas>
-          <div class="readout" id="plot-readout"></div>
+          <p class="plot-caption" id="plot-readout"></p>
         </div>
+        <aside class="dock" data-dock>
+          <div class="dock-bar">
+            <button type="button" class="btn primary" data-play aria-pressed="${playing}">${playing ? "Pause" : "Play"}</button>
+            <button type="button" class="btn" data-reset>Reset</button>
+            <button type="button" class="btn ghost dock-toggle" data-dock-toggle aria-expanded="false">Controls</button>
+          </div>
+          <div class="dock-body" id="transport">
+            <div class="dock-tools">
+              <div class="control">
+                <label for="int">Integrator</label>
+                <select id="int">${METHOD_LIST.map(
+                  (m) => `<option value="${m.id}" ${m.id === method ? "selected" : ""}>${m.name}</option>`,
+                ).join("")}</select>
+              </div>
+              <div class="control">
+                <label for="dt">Δt <span class="value" data-dt-val>${dt.toFixed(4)}</span></label>
+                <input id="dt" type="range" min="0.0005" max="0.04" step="0.0005" value="${dt}" />
+              </div>
+              <div class="control">
+                <label for="speed">Speed <span class="value" data-speed-val>${speed.toFixed(2)}×</span></label>
+                <input id="speed" type="range" min="0.1" max="4" step="0.1" value="${speed}" />
+              </div>
+            </div>
+            <div class="controls" id="controls"></div>
+          </div>
+        </aside>
       </div>
-      <div class="controls" id="controls"></div>
       <section class="writeup" id="writeup">${renderWriteup(meta.writeup)}</section>
     </article>
   `;
@@ -66,27 +93,49 @@ export function mountSimPage(
   const plotCanvas = new HiDpiCanvas(root.querySelector("#plot") as HTMLCanvasElement);
   const worldReadout = root.querySelector("#world-readout") as HTMLElement;
   const plotReadout = root.querySelector("#plot-readout") as HTMLElement;
-  const transport = root.querySelector("#transport") as HTMLElement;
+  const hudPrimary = root.querySelector("[data-hud-primary]") as HTMLElement;
+  const hudExtra = root.querySelector("[data-hud-extra]") as HTMLElement;
+  const hudToggle = root.querySelector("[data-hud-toggle]") as HTMLButtonElement;
+  const dock = root.querySelector("[data-dock]") as HTMLElement;
+  const dockToggle = root.querySelector("[data-dock-toggle]") as HTMLButtonElement;
   const controlsEl = root.querySelector("#controls") as HTMLElement;
+  const wideDock = window.matchMedia("(min-width: 1280px)");
 
-  transport.innerHTML = `
-    <button type="button" class="btn primary" data-play aria-pressed="${playing}">${playing ? "Pause" : "Play"}</button>
-    <button type="button" class="btn" data-reset>Reset</button>
-    <div class="control transport-field">
-      <label for="int">Integrator</label>
-      <select id="int">${METHOD_LIST.map(
-        (m) => `<option value="${m.id}" ${m.id === method ? "selected" : ""}>${m.name}</option>`,
-      ).join("")}</select>
-    </div>
-    <div class="control transport-field">
-      <label for="dt">Δt <span class="value" data-dt-val>${dt.toFixed(4)}</span></label>
-      <input id="dt" type="range" min="0.0005" max="0.04" step="0.0005" value="${dt}" />
-    </div>
-    <div class="control transport-field">
-      <label for="speed">Speed <span class="value" data-speed-val>${speed.toFixed(2)}×</span></label>
-      <input id="speed" type="range" min="0.1" max="4" step="0.1" value="${speed}" />
-    </div>
-  `;
+  const setDockOpen = (open: boolean): void => {
+    dock.classList.toggle("is-open", open);
+    dockToggle.setAttribute("aria-expanded", String(open));
+    dockToggle.textContent = open ? "Hide" : "Controls";
+  };
+  setDockOpen(wideDock.matches);
+  const onDockMq = (): void => setDockOpen(wideDock.matches);
+  wideDock.addEventListener("change", onDockMq);
+  dockToggle.addEventListener("click", () => setDockOpen(!dock.classList.contains("is-open")));
+
+  const fillHud = (el: HTMLElement, items: HudItem[]): void => {
+    el.replaceChildren();
+    for (const item of items) {
+      const wrap = document.createElement("div");
+      wrap.className = "hud-item";
+      const dtEl = document.createElement("dt");
+      dtEl.textContent = item.label;
+      const ddEl = document.createElement("dd");
+      ddEl.textContent = item.value;
+      wrap.append(dtEl, ddEl);
+      el.append(wrap);
+    }
+  };
+  const paintHud = (): void => {
+    const { primary, extra } = sim.hud();
+    fillHud(hudPrimary, primary);
+    fillHud(hudExtra, extra);
+    hudToggle.hidden = extra.length === 0;
+  };
+  hudToggle.addEventListener("click", () => {
+    const open = hudExtra.hidden;
+    hudExtra.hidden = !open;
+    hudToggle.setAttribute("aria-expanded", String(open));
+    hudToggle.textContent = open ? "Less" : "Details";
+  });
 
   controlsEl.innerHTML = meta.controls
     .map((c) => {
@@ -124,7 +173,7 @@ export function mountSimPage(
   });
   sim.reset(params, frameOf());
 
-  const playBtn = transport.querySelector("[data-play]") as HTMLButtonElement;
+  const playBtn = root.querySelector("[data-play]") as HTMLButtonElement;
   const loop = new SimLoop({
     dt,
     speed,
@@ -138,7 +187,8 @@ export function mountSimPage(
       sim.drawWorld(worldCanvas.ctx, worldCanvas.width, worldCanvas.height, alpha, stats.frameMs);
       sim.drawPlot(plotCanvas.ctx, plotCanvas.width, plotCanvas.height);
       worldReadout.textContent = sim.readout();
-      plotReadout.textContent = `${sim.plotCaption()}  ·  ${stats.fps.toFixed(0)} fps`;
+      plotReadout.textContent = sim.plotCaption();
+      paintHud();
     },
   });
   loop.start();
@@ -164,7 +214,7 @@ export function mountSimPage(
     syncUrl();
   };
 
-  const intSelect = transport.querySelector("#int") as HTMLSelectElement;
+  const intSelect = root.querySelector("#int") as HTMLSelectElement;
   const syncCompareUi = (): void => {
     const cmp = params.cmp === true || params.cmp === "true" || params.cmp === "1";
     intSelect.disabled = Boolean(cmp);
@@ -173,27 +223,27 @@ export function mountSimPage(
   syncCompareUi();
 
   playBtn.addEventListener("click", () => setPlaying(!playing));
-  transport.querySelector("[data-reset]")!.addEventListener("click", () => {
+  root.querySelector("[data-reset]")!.addEventListener("click", () => {
     sim.reset(params, frameOf());
     loop.resetAccumulator();
   });
-  transport.querySelector("#int")!.addEventListener("change", (ev) => {
+  root.querySelector("#int")!.addEventListener("change", (ev) => {
     const v = (ev.target as HTMLSelectElement).value;
     if (!isMethodId(v)) return;
     method = v;
     sim.reset(params, frameOf());
     syncUrl();
   });
-  transport.querySelector("#dt")!.addEventListener("input", (ev) => {
+  root.querySelector("#dt")!.addEventListener("input", (ev) => {
     dt = Number((ev.target as HTMLInputElement).value);
     loop.dt = dt;
-    (transport.querySelector("[data-dt-val]") as HTMLElement).textContent = dt.toFixed(4);
+    (root.querySelector("[data-dt-val]") as HTMLElement).textContent = dt.toFixed(4);
     syncUrl();
   });
-  transport.querySelector("#speed")!.addEventListener("input", (ev) => {
+  root.querySelector("#speed")!.addEventListener("input", (ev) => {
     speed = Number((ev.target as HTMLInputElement).value);
     loop.speed = speed;
-    (transport.querySelector("[data-speed-val]") as HTMLElement).textContent = `${speed.toFixed(2)}×`;
+    (root.querySelector("[data-speed-val]") as HTMLElement).textContent = `${speed.toFixed(2)}×`;
     syncUrl();
   });
 
@@ -262,6 +312,7 @@ export function mountSimPage(
     destroy() {
       loop.stop();
       window.removeEventListener("resize", onResize);
+      wideDock.removeEventListener("change", onDockMq);
     },
     togglePlay() {
       setPlaying(!playing);
@@ -276,9 +327,9 @@ export function mountSimPage(
     setSpeed(mult: number) {
       speed = Math.min(4, Math.max(0.1, speed * mult));
       loop.speed = speed;
-      const slider = transport.querySelector("#speed") as HTMLInputElement;
+      const slider = root.querySelector("#speed") as HTMLInputElement;
       slider.value = String(speed);
-      (transport.querySelector("[data-speed-val]") as HTMLElement).textContent = `${speed.toFixed(2)}×`;
+      (root.querySelector("[data-speed-val]") as HTMLElement).textContent = `${speed.toFixed(2)}×`;
       syncUrl();
     },
     stats() {

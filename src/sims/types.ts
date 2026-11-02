@@ -54,6 +54,16 @@ export interface SimFrame {
   dt: number;
 }
 
+export interface HudItem {
+  label: string;
+  value: string;
+}
+
+export interface Hud {
+  primary: HudItem[];
+  extra: HudItem[];
+}
+
 export interface Simulation {
   readonly meta: SimMeta;
   reset(params: Record<string, ParamValue>, frame: SimFrame): void;
@@ -70,6 +80,7 @@ export interface Simulation {
   plotCaption(): string;
   energy(): number;
   readout(): string;
+  hud(): Hud;
   pointerDown?(sx: number, sy: number, w: number, h: number): boolean;
   pointerMove?(sx: number, sy: number, w: number, h: number): void;
   pointerUp?(): void;
