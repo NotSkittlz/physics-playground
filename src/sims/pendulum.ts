@@ -2,6 +2,7 @@ import { fillBackground, type Palette } from "../core/canvas.ts";
 import { drawDisc, lerpAngle } from "../core/draw.ts";
 import { wrapPi, wrapTwoPi } from "../core/math.ts";
 import { drawPlot, RingSeries } from "../core/plot.ts";
+import { interpolateSection } from "../core/strobe.ts";
 import { Trail2D } from "../core/trail.ts";
 import {
   PENDULUM_CHAOS,
@@ -22,7 +23,10 @@ export class PendulumSim implements Simulation {
   private energySeries!: RingSeries;
   private phase!: RingSeries;
   private poincare!: RingSeries;
-  private lastStrobe = -1;
+  private prevT = 0;
+  private prevTh = 0;
+  private prevOm = 0;
+  private hasPrev = false;
   private plot: "energy" | "phase" | "poincare" = "phase";
   private E0 = 0;
 
@@ -44,7 +48,7 @@ export class PendulumSim implements Simulation {
     this.phase = new RingSeries(this.reduced ? 300 : 1400, this.pal.sky, "phase");
     this.poincare = new RingSeries(2000, this.pal.rose, "Poincaré");
     this.E0 = pendulumEnergy(this.p, th0, 0);
-    this.lastStrobe = -1;
+    this.hasPrev = false;
     this.sample(this.body.curr.q[0], this.body.curr.v[0], 0);
   }
 
@@ -160,11 +164,15 @@ export class PendulumSim implements Simulation {
     this.energySeries.push(t, this.E0 !== 0 ? (E - this.E0) / Math.abs(this.E0) : 0);
     if (this.p.driveAmp > 0 && this.p.driveFreq > 0) {
       const T = (2 * Math.PI) / this.p.driveFreq;
-      const n = Math.floor(t / T + 1e-12);
-      if (n > this.lastStrobe && n > 0) {
-        this.poincare.push(wrapPi(th), om);
-        this.lastStrobe = n;
+      if (this.hasPrev) {
+        for (const hit of interpolateSection(this.prevT, this.prevTh, this.prevOm, t, th, om, T)) {
+          this.poincare.push(wrapPi(hit.th), hit.om);
+        }
       }
+      this.prevT = t;
+      this.prevTh = th;
+      this.prevOm = om;
+      this.hasPrev = true;
     }
   }
 }
