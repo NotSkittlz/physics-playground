@@ -1,6 +1,5 @@
 import { applyTheme, preferredTheme, toggleTheme } from "../core/theme.ts";
 import { parseHash } from "../core/url.ts";
-import { PhysicsWorker } from "../core/worker-bridge.ts";
 import { metaById } from "../sims/registry.ts";
 import { renderHome } from "./home.ts";
 import { mountSimPage, type SimPageHandle } from "./sim-page.ts";
@@ -27,7 +26,6 @@ export function startApp(root: HTMLElement): void {
       <div><span data-sps>0</span> steps/s</div>
       <div><span data-ms>0</span> ms/frame</div>
       <div>physics on main · batched</div>
-      <div data-worker>worker: idle</div>
     </div>
     <div class="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
       <div class="help-card">
@@ -60,7 +58,6 @@ export function startApp(root: HTMLElement): void {
   let perfOn = false;
   let helpPrev: HTMLElement | null = null;
   let liveAt = 0;
-  const worker = new PhysicsWorker();
 
   const helpFocusables = (): HTMLElement[] =>
     Array.from(help.querySelectorAll<HTMLElement>(
@@ -129,10 +126,6 @@ export function startApp(root: HTMLElement): void {
     perfOn = !perfOn;
     perf.hidden = !perfOn;
     perfBtn.setAttribute("aria-pressed", String(perfOn));
-    const wlabel = perf.querySelector("[data-worker]") as HTMLElement;
-    wlabel.textContent =
-      typeof Worker !== "undefined" ? "worker: available (idle)" : "worker: n/a";
-    void worker;
   });
 
   window.addEventListener("keydown", (ev) => {

@@ -12,9 +12,6 @@ export default defineConfig({
     host: true,
     port: 4173,
   },
-  worker: {
-    format: "es",
-  },
   build: {
     target: "es2022",
     sourcemap: true,
@@ -23,6 +20,5 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
     restoreMocks: true,
-    passWithNoTests: true,
   },
 });
