@@ -74,14 +74,29 @@ export function drawPlot(
   ctx.lineWidth = 1;
   ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
 
+  const padT = series.length > 1 ? 40 : PAD.t;
   ctx.fillStyle = pal.muted;
   ctx.font = "600 12px 'Source Sans 3', sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
-  ctx.fillText(opts.title, 12, 8);
+  ctx.fillText(opts.title, 12, 6);
+
+  if (series.length > 1) {
+    ctx.font = "11px 'Source Sans 3', sans-serif";
+    let lx = 12;
+    const ly = 22;
+    const gap = 10;
+    for (const s of series) {
+      const tw = ctx.measureText(s.label).width;
+      if (lx + tw > w - 8) break;
+      ctx.fillStyle = s.color;
+      ctx.fillText(s.label, lx, ly);
+      lx += tw + gap;
+    }
+  }
 
   const innerW = w - PAD.l - PAD.r;
-  const innerH = h - PAD.t - PAD.b;
+  const innerH = h - padT - PAD.b;
   if (innerW < 20 || innerH < 20) return;
 
   let xmin = Infinity;
@@ -99,7 +114,7 @@ export function drawPlot(
   if (!Number.isFinite(xmin)) {
     ctx.fillStyle = pal.muted;
     ctx.font = "13px 'Source Sans 3', sans-serif";
-    ctx.fillText("waiting for samples…", PAD.l, PAD.t + innerH / 2);
+    ctx.fillText("waiting for samples…", PAD.l, padT + innerH / 2);
     return;
   }
   const xPad = paddedSpan(xmin, xmax);
@@ -111,32 +126,32 @@ export function drawPlot(
   const ySpan = ymax - ymin;
 
   const xTo = (x: number) => PAD.l + ((x - xmin) / (xmax - xmin)) * innerW;
-  const yTo = (y: number) => PAD.t + ((ymax - y) / (ymax - ymin)) * innerH;
+  const yTo = (y: number) => padT + ((ymax - y) / (ymax - ymin)) * innerH;
 
   ctx.strokeStyle = withAlpha(pal.ink, 0.12);
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(PAD.l, PAD.t);
-  ctx.lineTo(PAD.l, PAD.t + innerH);
-  ctx.lineTo(PAD.l + innerW, PAD.t + innerH);
+  ctx.moveTo(PAD.l, padT);
+  ctx.lineTo(PAD.l, padT + innerH);
+  ctx.lineTo(PAD.l + innerW, padT + innerH);
   ctx.stroke();
 
   ctx.fillStyle = pal.muted;
   ctx.font = "11px 'IBM Plex Mono', monospace";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  ctx.fillText(formatTick(ymax, ySpan), PAD.l - 6, PAD.t);
-  ctx.fillText(formatTick(ymin, ySpan), PAD.l - 6, PAD.t + innerH);
+  ctx.fillText(formatTick(ymax, ySpan), PAD.l - 6, padT);
+  ctx.fillText(formatTick(ymin, ySpan), PAD.l - 6, padT + innerH);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  ctx.fillText(formatTick(xmin, xmax - xmin), PAD.l, PAD.t + innerH + 6);
-  ctx.fillText(formatTick(xmax, xmax - xmin), PAD.l + innerW, PAD.t + innerH + 6);
+  ctx.fillText(formatTick(xmin, xmax - xmin), PAD.l, padT + innerH + 6);
+  ctx.fillText(formatTick(xmax, xmax - xmin), PAD.l + innerW, padT + innerH + 6);
 
   ctx.fillStyle = pal.muted;
   ctx.font = "11px 'Source Sans 3', sans-serif";
   ctx.fillText(opts.xLabel, PAD.l + innerW / 2, h - 14);
   ctx.save();
-  ctx.translate(12, PAD.t + innerH / 2);
+  ctx.translate(12, padT + innerH / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textBaseline = "middle";
   ctx.fillText(opts.yLabel, 0, 0);
@@ -174,18 +189,6 @@ export function drawPlot(
         } else ctx.lineTo(px, py);
       }
       ctx.stroke();
-    }
-  }
-
-  if (series.length > 1) {
-    const lx = w - 12;
-    ctx.textAlign = "right";
-    ctx.textBaseline = "top";
-    ctx.font = "11px 'Source Sans 3', sans-serif";
-    for (let i = 0; i < series.length; i++) {
-      const s = series[i];
-      ctx.fillStyle = s.color;
-      ctx.fillText(s.label, lx, 8 + i * 14);
     }
   }
 }
