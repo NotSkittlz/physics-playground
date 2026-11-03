@@ -1,0 +1,37 @@
+{
+  "name": "physics-playground",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interactive physics simulations in the browser, built on clean numerical integrators.",
+  "author": "Lucas Guerra",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/fraunces": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/source-sans-3": "^5.3.1",
+    "katex": "^0.16.22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.38.0",
+    "@types/katex": "^0.16.7",
+    "@types/node": "^24.9.1",
+    "eslint": "^9.38.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2",
+    "vite": "^7.1.12",
+    "vitest": "^3.2.4"
+  }
+}

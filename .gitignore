@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local env
+*.local
+.env
+.env.*
+
+# Editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Test / Playwright
+test-results/
+playwright-report/
+blob-report/
+.playwright-mcp/
+
+# OS
+Thumbs.db
